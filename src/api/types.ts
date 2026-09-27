@@ -65,6 +65,7 @@ export interface AddTrackRequest {
   artist_uuid: string;
   album_uuid: string;
   explicit?: boolean;
+  /** Имя исходного файла. Сервер берёт из него только расширение, путь генерирует сам. */
   path?: string;
   duration_ms?: number;
 }

@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { catalog } from '../api/endpoints';
 import { ApiError, errorLabel } from '../api/http';
-import { pad2 } from '../lib/format';
-import { audioQuality, extOf, isAudio, isImage, probeAudio, type AudioMeta } from '../lib/metadata';
+
+import { audioQuality, isAudio, isImage, probeAudio, type AudioMeta } from '../lib/metadata';
 import { mapPool } from '../lib/pool';
 
 // Загрузка релиза поверх API v1. Контракт не даёт серверной очереди индексации,
@@ -228,10 +228,6 @@ async function resolveArtist(name: string) {
   }
 }
 
-function storagePath(albumUuid: string, position: number, file: File) {
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `${albumUuid}/${pad2(position)}-${rand}.${extOf(file.name) || 'bin'}`;
-}
 
 export interface PublishResult {
   albumUuid: string;
@@ -278,7 +274,7 @@ export async function publishDraft(): Promise<PublishResult> {
             album_uuid: albumUuid,
             explicit: t.explicit,
             duration_ms: t.meta.durationMs ?? 0,
-            path: storagePath(albumUuid, base + i + 1, t.file),
+            path: t.file.name,
           });
           trackUuid = created.track_uuid;
           patchTrack(t.id, { trackUuid });
