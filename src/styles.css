@@ -1,3 +1,14 @@
+/* Шрифты — те же и те же сборки, что в клиенте (@fontsource, локально),
+   чтобы метрика и начертания совпадали с прививаемым визуалом. */
+@import '@fontsource-variable/manrope/wght.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-mono/600.css';
+@import '@fontsource/ibm-plex-mono/700.css';
+
+/* Токены приведены к клиентским (privy-stream/src/styles/tokens.css):
+   шкала текста, статусы и акцент идентичны, включая поднятый контраст
+   самых тёмных ступеней. */
 :root {
   --bg: #0b0b0c;
   --bar: #0e0e10;
@@ -11,18 +22,20 @@
   --stroke-hover: #4a4a50;
   --text: #e8e6e1;
   --text-2: #c8c6c0;
-  --text-3: #a8a6a0;
-  --text-4: #8e8c86;
-  --text-5: #6e6c67;
-  --text-6: #4e4c48;
+  --text-3: #8e8c86;
+  --text-4: #7d7b76;
+  --text-5: #6f6d68;
+  --text-6: #666460;
   --accent: #d8452b;
   --accent-hover: #f0563a;
   --accent-text: #f0765c;
-  --ok: #8db36b;
-  --warn: #d9a441;
+  --ok: #7fae6b;
+  --warn: #e8c24b;
   --err: #d8452b;
+  --dot-off: #3a3a40;
+  --on-accent: #0b0b0c;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --sans: Manrope, Helvetica, sans-serif;
+  --sans: 'Manrope Variable', Manrope, Helvetica, sans-serif;
 }
 
 html,
@@ -35,6 +48,8 @@ body,
   color: var(--text);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
+  /* Как в клиенте: без системной синей вспышки при тапе на мобильных */
+  -webkit-tap-highlight-color: transparent;
 }
 * {
   box-sizing: border-box;
@@ -47,6 +62,13 @@ input,
 button {
   font-family: inherit;
 }
+/* Плейсхолдер — как в клиенте: приглушённая ступень шкалы, а не браузерный полутон */
+.input::placeholder {
+  color: var(--text-6);
+}
+input {
+  user-select: text;
+}
 button {
   background: none;
   border: 0;
@@ -58,9 +80,16 @@ button {
 button:disabled {
   cursor: default;
 }
+/* Фокус — как в клиенте: только :focus-visible, внутрь элемента */
+:focus {
+  outline: none;
+}
 :focus-visible {
   outline: 1px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: -1px;
+}
+input:focus-visible {
+  outline: none;
 }
 ::-webkit-scrollbar {
   width: 8px;
@@ -91,6 +120,14 @@ button:disabled {
   }
   100% {
     opacity: 0.35;
+  }
+}
+
+/* iOS не масштабирует страницу при фокусе на поле со шрифтом меньше 16px */
+@media (max-width: 720px) {
+  input,
+  select {
+    font-size: 16px !important;
   }
 }
 
