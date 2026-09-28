@@ -1,8 +1,10 @@
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { releaseType } from '../api/catalogIndex';
+import { catalog as catalogApi } from '../api/endpoints';
 import { errorLabel } from '../api/http';
+import type { Artist } from '../api/types';
 import { Chip, ErrorLine, ScreenHeader, useConfirm } from '../components/ui';
 import { fmtBytes, fmtDuration, pad2, shortId } from '../lib/format';
 import { audioQuality, extOf, filesFromDataTransfer } from '../lib/metadata';
@@ -104,6 +106,25 @@ export function Releases() {
 
   const locked = isDraftLocked(draft);
   const existing = draft.target.kind === 'existing' ? draft.target : null;
+
+  // Подсказки артиста: имя ищется в каталоге узла с debounce, выбор подставляет
+  // его uuid в публикацию; без выбора имя уйдёт в AddArtist как новый артист.
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [debouncedArtist, setDebouncedArtist] = useState('');
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedArtist(draft.artist), 250);
+    return () => window.clearTimeout(t);
+  }, [draft.artist]);
+  const canSuggest = suggestOpen && !existing && !locked && debouncedArtist.trim().length > 0;
+  const suggest = useQuery({
+    queryKey: ['artist-suggest', debouncedArtist.trim()],
+    queryFn: () => catalogApi.searchArtists(debouncedArtist.trim(), { limit: 8 }),
+    enabled: canSuggest,
+  });
+  const pickArtist = (a: Artist) => {
+    updateDraft({ artist: a.artist_name, artistUuid: a.artist_uuid, artistName: a.artist_name });
+    setSuggestOpen(false);
+  };
 
   // /releases?album={uuid} — дозалить треки в существующий релиз (пришли из каталога).
   const albumParam = params.get('album');
@@ -296,14 +317,69 @@ export function Releases() {
                   onChange={(e) => updateDraft({ title: e.target.value })}
                   aria-label="Название релиза"
                 />
-                <input
-                  className="input"
-                  placeholder="Исполнитель"
-                  value={draft.artist}
-                  disabled={!!existing || locked}
-                  onChange={(e) => updateDraft({ artist: e.target.value })}
-                  aria-label="Исполнитель"
-                />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    className="input"
+                    placeholder="Исполнитель"
+                    value={draft.artist}
+                    disabled={!!existing || locked}
+                    autoComplete="off"
+                    onChange={(e) => {
+                      updateDraft({ artist: e.target.value, artistUuid: undefined, artistName: undefined });
+                      setSuggestOpen(true);
+                    }}
+                    onFocus={() => setSuggestOpen(true)}
+                    onBlur={(e) => {
+                      if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node | null)) setSuggestOpen(false);
+                    }}
+                    onKeyDown={(e) => e.key === 'Escape' && setSuggestOpen(false)}
+                    aria-label="Исполнитель"
+                  />
+                  {canSuggest && (
+                    <div className="suggest">
+                      <div className="suggest-list">
+                        {suggest.isFetching && !suggest.data?.length && <div className="suggest-note">Поиск по каталогу…</div>}
+                        {suggest.data?.map((a) => (
+                          <button
+                            key={a.artist_uuid}
+                            type="button"
+                            className={`suggest-item${a.artist_uuid === draft.artistUuid ? ' selected' : ''}`}
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => pickArtist(a)}
+                          >
+                            {a.artist_name}
+                            <span className="suggest-id">{shortId(a.artist_uuid)}</span>
+                          </button>
+                        ))}
+                        {suggest.data && !suggest.data.length && (
+                          <div className="suggest-note">Совпадений нет — «{draft.artist.trim()}» зальётся как новый артист.</div>
+                        )}
+                        {suggest.error && <div className="suggest-note c-err">Поиск не ответил: {errorLabel(suggest.error)}</div>}
+                      </div>
+                      <button
+                        type="button"
+                        className="suggest-item suggest-create"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => setSuggestOpen(false)}
+                      >
+                        + Создать нового: «{draft.artist.trim()}»
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {draft.artistUuid && draft.artistName && !existing && (
+                  <span className="hint artist-binding">
+                    Зальётся в карточку «{draft.artistName}» · <span className="mono">{shortId(draft.artistUuid)}</span>
+                    <button
+                      type="button"
+                      className="link-muted"
+                      title="Выбрать артиста заново"
+                      onClick={() => updateDraft({ artistUuid: undefined, artistName: undefined })}
+                    >
+                      сбросить ×
+                    </button>
+                  </span>
+                )}
               </div>
             </div>
             <div className="note">{typeNote}</div>

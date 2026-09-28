@@ -1055,6 +1055,64 @@ button.flag.on:hover:not(:disabled) {
   color: var(--text-5);
 }
 
+/* Подсказки артиста над черновиком релиза */
+.suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 8;
+  background: #151817;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+}
+.suggest-list {
+  max-height: 236px;
+  overflow-y: auto;
+}
+.suggest-note {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--row-line);
+  font: 400 12px/1.45 var(--sans);
+  color: var(--text-4);
+}
+.suggest-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--row-line);
+  font: 500 13px/1.3 var(--sans);
+  color: var(--text-2);
+}
+.suggest-item:hover {
+  background: var(--row-hover);
+  color: var(--text);
+}
+.suggest-item .suggest-id {
+  margin-left: auto;
+  font: 400 11px/1 var(--mono);
+  color: var(--text-5);
+}
+.suggest-item.selected {
+  color: var(--accent-text);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.suggest-create {
+  color: var(--text-3);
+}
+.suggest-create:hover {
+  color: var(--text);
+}
+.artist-binding {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ---------- catalog ---------- */
 
 .album-row {

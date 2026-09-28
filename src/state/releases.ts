@@ -46,6 +46,8 @@ export interface Draft {
   artist: string;
   tracks: DraftTrack[];
   artistUuid?: string;
+  /** Имя артиста, на карточку которого указывает artistUuid (выбор из подсказок). */
+  artistName?: string;
   albumUuid?: string;
   publishing: boolean;
   error?: string;
@@ -166,7 +168,7 @@ export function returnToQueue(trackId: string) {
   }));
 }
 
-export function updateDraft(patch: Partial<Pick<Draft, 'title' | 'artist'>>) {
+export function updateDraft(patch: Partial<Pick<Draft, 'title' | 'artist' | 'artistUuid' | 'artistName'>>) {
   setDraft((d) => ({ ...d, ...patch }));
 }
 
@@ -194,6 +196,7 @@ export function setDraftTarget(target: DraftTarget) {
     title: target.kind === 'existing' ? target.albumName : '',
     artist: target.kind === 'existing' ? target.artistName : '',
     artistUuid: undefined,
+    artistName: undefined,
     albumUuid: undefined,
     error: undefined,
   }));
