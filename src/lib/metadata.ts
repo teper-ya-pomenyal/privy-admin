@@ -7,6 +7,21 @@ export const extOf = (name: string) => name.split('.').pop()?.toLowerCase() ?? '
 export const isAudio = (f: File) => AUDIO_EXT.includes(extOf(f.name)) || f.type.startsWith('audio/');
 export const isImage = (f: File) => IMAGE_EXT.includes(extOf(f.name)) || f.type.startsWith('image/');
 
+// Размеры картинки в пикселях; null — прочитать не удалось.
+export function imageSize(file: File): Promise<{ w: number; h: number } | null> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    const done = (v: { w: number; h: number } | null) => {
+      URL.revokeObjectURL(url);
+      resolve(v);
+    };
+    img.onload = () => done({ w: img.naturalWidth, h: img.naturalHeight });
+    img.onerror = () => done(null);
+    img.src = url;
+  });
+}
+
 export interface AudioMeta {
   title: string;
   // Название есть в тегах файла, а не выведено из имени файла.

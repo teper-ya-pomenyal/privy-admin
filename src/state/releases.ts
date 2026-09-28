@@ -49,6 +49,9 @@ export interface Draft {
   /** Имя артиста, на карточку которого указывает artistUuid (выбор из подсказок). */
   artistName?: string;
   albumUuid?: string;
+  /** Обложка — только локальный предпросмотр: API v1 обложки не принимает. */
+  cover?: File;
+  coverUrl?: string;
   publishing: boolean;
   error?: string;
 }
@@ -172,6 +175,23 @@ export function updateDraft(patch: Partial<Pick<Draft, 'title' | 'artist' | 'art
   setDraft((d) => ({ ...d, ...patch }));
 }
 
+/** Обложка живёт только в этой вкладке: превью через object URL, на сервер не уходит.
+    Картинки больше COVER_MAX_SIDE×COVER_MAX_SIDE отклоняет pickCover на экране. */
+export const COVER_MAX_SIDE = 3000;
+
+export function setDraftCover(file: File | undefined) {
+  if (state.draft.publishing) return;
+  setDraft((d) => {
+    if (d.coverUrl) URL.revokeObjectURL(d.coverUrl);
+    return { ...d, cover: file, coverUrl: file ? URL.createObjectURL(file) : undefined };
+  });
+}
+
+const dropDraft = (): Draft => {
+  if (state.draft.coverUrl) URL.revokeObjectURL(state.draft.coverUrl);
+  return emptyDraft();
+};
+
 export function updateTrack(id: string, patch: Partial<Pick<DraftTrack, 'title' | 'explicit'>>) {
   const t = state.draft.tracks.find((x) => x.id === id);
   if (!t || t.trackUuid) return; // трек уже создан в каталоге — API не умеет его менять
@@ -209,7 +229,7 @@ export function resetDraft() {
   const back = state.draft.tracks
     .filter((t) => !t.trackUuid)
     .map((t): QueueItem => ({ id: t.id, file: t.file, stage: 'READY', meta: t.meta }));
-  set((s) => ({ queue: [...s.queue, ...back], draft: emptyDraft() }));
+  set((s) => ({ queue: [...s.queue, ...back], draft: dropDraft() }));
 }
 
 // ---------- публикация ----------
@@ -304,7 +324,7 @@ export async function publishDraft(): Promise<PublishResult> {
     }
 
     const result: PublishResult = { albumUuid, title: d0.title.trim(), count: state.draft.tracks.length };
-    set((s) => ({ ...s, draft: emptyDraft() }));
+    set((s) => ({ ...s, draft: dropDraft() }));
     return result;
   } catch (e) {
     setDraft((d) => ({ ...d, publishing: false, error: errorLabel(e) }));

@@ -7,7 +7,7 @@ import { errorLabel } from '../api/http';
 import type { Artist } from '../api/types';
 import { Chip, ErrorLine, ScreenHeader, useConfirm } from '../components/ui';
 import { fmtBytes, fmtDuration, pad2, shortId } from '../lib/format';
-import { audioQuality, extOf, filesFromDataTransfer } from '../lib/metadata';
+import { audioQuality, extOf, filesFromDataTransfer, imageSize, isImage } from '../lib/metadata';
 import { CATALOG_KEY, useCatalogIndex } from '../state/queries';
 import {
   addFiles,
@@ -20,9 +20,11 @@ import {
   retryProbe,
   returnToQueue,
   setDraftTarget,
+  setDraftCover,
   updateDraft,
   updateTrack,
   useReleases,
+  COVER_MAX_SIDE,
   type DraftTrack,
   type QueueItem,
 } from '../state/releases';
@@ -100,6 +102,7 @@ export function Releases() {
   const { confirm, node: confirmNode } = useConfirm();
   const filesInput = useRef<HTMLInputElement>(null);
   const dirInput = useRef<HTMLInputElement>(null);
+  const coverInput = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
@@ -145,12 +148,33 @@ export function Releases() {
     setParams({}, { replace: true });
   }, [albumParam, catalog.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Обложка больше 3000×3000 не принимается: превью держим в памяти вкладки.
+  const pickCover = async (file: File | undefined) => {
+    if (!file) {
+      setDraftCover(undefined);
+      return;
+    }
+    const size = await imageSize(file);
+    if (!size || size.w > COVER_MAX_SIDE || size.h > COVER_MAX_SIDE) {
+      toast(
+        size
+          ? `Обложка ${size.w}×${size.h} — больше лимита ${COVER_MAX_SIDE}×${COVER_MAX_SIDE}, не принята`
+          : 'Обложку не удалось прочитать — не принята',
+      );
+      return;
+    }
+    setDraftCover(file);
+  };
+
   const ingest = (files: File[]) => {
     if (!files.length) return;
+    // Картинка из общей зоны не теряется: первая уходит в обложку-предпросмотр.
+    const image = files.find(isImage);
+    if (image) void pickCover(image);
     const r = addFiles(files);
     const parts = [`В очередь: ${r.added}`];
     if (r.duplicates) parts.push(`повторов ${r.duplicates}`);
-    if (r.images) parts.push(`обложек пропущено ${r.images} — нет в API`);
+    if (r.images) parts.push('обложка — только предпросмотр');
     if (r.other) parts.push(`не аудио ${r.other}`);
     toast(parts.join(' · '));
   };
@@ -237,7 +261,7 @@ export function Releases() {
             onDrop={onDrop}
           >
             <div className="dropzone-title">Перетащи файлы или папку релиза</div>
-            <div className="note">FLAC · ALAC · WAV · MP3 · обложки API v1 не принимает</div>
+            <div className="note">FLAC · ALAC · WAV · MP3 · изображение из зоны станет обложкой-предпросмотром</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <span className="btn">Выбрать файлы</span>
               <button
@@ -302,11 +326,44 @@ export function Releases() {
             </div>
           </div>
           <div className="card-body">
+            <div className="hint">
+              Обложка — только локальный предпросмотр (до 3000×3000): API v1 обложки не принимает, на узел она не отправляется.
+            </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <div className="draft-cover">
-                нет
-                <br />
-                обложки
+              <div style={{ position: 'relative', flex: 'none' }}>
+                <button
+                  type="button"
+                  className={`draft-cover${draft.coverUrl ? ' has-image' : ''}`}
+                  onClick={() => coverInput.current?.click()}
+                  disabled={draft.publishing}
+                  title={draft.cover ? draft.cover.name : 'Выбрать обложку (предпросмотр, не отправляется)'}
+                  aria-label="Обложка релиза"
+                >
+                  {draft.coverUrl ? (
+                    <img src={draft.coverUrl} alt="" />
+                  ) : (
+                    <>
+                      нет
+                      <br />
+                      обложки
+                    </>
+                  )}
+                </button>
+                {draft.coverUrl && (
+                  <button type="button" className="cover-remove" title="Убрать обложку" onClick={() => setDraftCover(undefined)}>
+                    ×
+                  </button>
+                )}
+                <input
+                  ref={coverInput}
+                  type="file"
+                  accept="image/*"
+                  hidden
+                  onChange={(e) => {
+                    void pickCover(e.target.files?.[0]);
+                    e.target.value = '';
+                  }}
+                />
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
