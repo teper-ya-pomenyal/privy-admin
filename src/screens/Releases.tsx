@@ -40,7 +40,7 @@ function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
           <span className="q-name" title={q.file.webkitRelativePath || q.file.name}>
             {q.file.name}
           </span>
-          <span style={{ font: '400 10px/1.2 var(--mono)', color: 'var(--text-5)' }}>{meta}</span>
+          <span style={{ font: '400 11px/1.3 var(--mono)', color: 'var(--text-4)' }}>{meta}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           {q.stage === 'PROBE' && <span className="stage">PROBE · TAGS</span>}
@@ -66,7 +66,7 @@ function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
       <div className="bar">
         <div style={{ width: `${width}%`, background: color }} />
       </div>
-      {q.error && <span style={{ font: '400 10px/1.3 var(--mono)', color: 'var(--accent-text)' }}>{q.error}</span>}
+      {q.error && <span style={{ font: '400 11px/1.4 var(--mono)', color: 'var(--accent-text)' }}>{q.error}</span>}
     </div>
   );
 }
@@ -168,7 +168,7 @@ export function Releases() {
       const ok = await confirm(
         'Бросить незавершённую публикацию?',
         'Альбом и часть треков уже созданы в каталоге — API v1 не умеет их удалять. Несозданные треки вернутся в очередь.',
-        'СБРОСИТЬ',
+        'Сбросить',
       );
       if (!ok) return;
     }
@@ -182,10 +182,10 @@ export function Releases() {
       : 'Все разобранные файлы из очереди можно добавить в релиз одним действием. Порядок — по номеру трека из тегов, дальше перетаскиванием.';
 
   const addAllLabel = ready
-    ? `+ ДОБАВИТЬ ВСЕ ГОТОВЫЕ В РЕЛИЗ · ${ready}`
+    ? `+ Добавить все готовые в релиз · ${ready}`
     : probing
-      ? `ЖДЁМ РАЗБОР ТЕГОВ · ${probing}`
-      : 'НЕТ ГОТОВЫХ ФАЙЛОВ';
+      ? `Ждём разбор тегов · ${probing}`
+      : 'Нет готовых файлов';
 
   const onRowDrop = (to: number) => {
     if (dragIdx !== null) moveTrack(dragIdx, to);
@@ -196,7 +196,7 @@ export function Releases() {
   return (
     <>
       <ScreenHeader
-        code="02 · ЗАГРУЗКА"
+        code="02 · Загрузка"
         title="Релизы"
         sub="Файлы разбираются в браузере, затем собираются в релиз и заливаются на узел. Сингл — это альбом с одним треком."
       />
@@ -218,7 +218,7 @@ export function Releases() {
             <div className="dropzone-title">Перетащи файлы или папку релиза</div>
             <div className="note">FLAC · ALAC · WAV · MP3 · обложки API v1 не принимает</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span className="btn">ВЫБРАТЬ ФАЙЛЫ</span>
+              <span className="btn">Выбрать файлы</span>
               <button
                 type="button"
                 className="btn"
@@ -227,7 +227,7 @@ export function Releases() {
                   dirInput.current?.click();
                 }}
               >
-                ПАПКУ
+                Папку
               </button>
             </div>
             <input
@@ -255,7 +255,7 @@ export function Releases() {
           </div>
 
           <div className="section-head" style={{ alignItems: 'center' }}>
-            <div className="label">ОЧЕРЕДЬ · {queue.length}</div>
+            <div className="label">Очередь · {queue.length}</div>
             <div className="hint" style={{ letterSpacing: '.06em' }}>
               PROBE → TAGS → INDEX → UPLOAD
             </div>
@@ -270,10 +270,10 @@ export function Releases() {
 
         <div className="card">
           <div className="card-head">
-            <span className="label">{existing ? 'ДОБАВЛЕНИЕ В РЕЛИЗ' : 'ЧЕРНОВИК РЕЛИЗА'}</span>
+            <span className="label">{existing ? 'Добавление в релиз' : 'Черновик релиза'}</span>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {existing && !locked && (
-                <Chip onClick={() => setDraftTarget({ kind: 'new' })}>НОВЫЙ РЕЛИЗ ×</Chip>
+                <Chip onClick={() => setDraftTarget({ kind: 'new' })}>Новый релиз ×</Chip>
               )}
               <span className="tag muted" title="Тип выводится из числа треков">
                 {type}
@@ -283,9 +283,9 @@ export function Releases() {
           <div className="card-body">
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
               <div className="draft-cover">
-                НЕТ
+                нет
                 <br />
-                ОБЛОЖКИ
+                обложки
               </div>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
@@ -351,7 +351,7 @@ export function Releases() {
                           файл: {t.file.name}
                         </span>
                       </div>
-                      <span style={{ font: '400 11px/1 var(--mono)', color: 'var(--text-5)', textAlign: 'right' }}>{fmtDuration(t.meta.durationMs)}</span>
+                      <span style={{ font: '400 11.5px/1 var(--mono)', color: 'var(--text-4)', textAlign: 'right' }}>{fmtDuration(t.meta.durationMs)}</span>
                       <button
                         type="button"
                         className={`flag${t.explicit ? ' on' : ''}`}
@@ -382,7 +382,7 @@ export function Releases() {
                             <div style={{ width: `${t.phase === 'index' ? 4 : Math.max(4, t.progress * 100)}%`, background: 'var(--accent)' }} />
                           </div>
                         )}
-                        {t.error && <span style={{ font: '400 10px/1.3 var(--mono)', color: 'var(--accent-text)' }}>{t.error}</span>}
+                        {t.error && <span style={{ font: '400 11px/1.4 var(--mono)', color: 'var(--accent-text)' }}>{t.error}</span>}
                       </div>
                     )}
                   </div>
@@ -397,18 +397,18 @@ export function Releases() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ font: '400 11px/1 var(--mono)', color: 'var(--text-5)' }}>
+              <span style={{ font: '400 11.5px/1.2 var(--mono)', color: 'var(--text-4)' }}>
                 {draft.tracks.length} тр · {fmtDuration(totalMs)}
                 {draft.albumUuid && ` · альбом ${shortId(draft.albumUuid)}`}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
                 {(draft.tracks.length > 0 || draft.title || existing) && (
                   <button type="button" className="btn" disabled={draft.publishing} onClick={reset}>
-                    СБРОСИТЬ
+                    Сбросить
                   </button>
                 )}
                 <button type="button" className="btn-accent lg" disabled={!canPublish} onClick={publish}>
-                  {draft.publishing ? 'ПУБЛИКАЦИЯ…' : resumable ? 'ПРОДОЛЖИТЬ' : existing ? 'ДОБАВИТЬ' : 'ОПУБЛИКОВАТЬ'}
+                  {draft.publishing ? 'Публикация…' : resumable ? 'Продолжить' : existing ? 'Добавить' : 'Опубликовать'}
                 </button>
               </div>
             </div>

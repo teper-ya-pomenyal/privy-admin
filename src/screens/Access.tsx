@@ -46,14 +46,14 @@ export function Sessions() {
   };
 
   const doLogout = async () => {
-    if (await confirm('Завершить эту сессию?', 'Refresh-токен будет инвалидирован через POST /logout, вход потребуется заново.', 'ВЫЙТИ')) {
+    if (await confirm('Завершить эту сессию?', 'Refresh-токен будет инвалидирован через POST /logout, вход потребуется заново.', 'Выйти')) {
       await logout().catch(() => {});
     }
   };
 
   return (
     <>
-      <ScreenHeader code="05 · ДОСТУП" title="Сессии" sub="Refresh-токены · RS256 · ротация при каждом /refresh." />
+      <ScreenHeader code="05 · Доступ" title="Сессии" sub="Refresh-токены · RS256 · ротация при каждом /refresh." />
       <div className="stack gap-30">
         <div className="list">
           <div className="wrap-row">
@@ -66,7 +66,7 @@ export function Sessions() {
               </div>
               <span style={{ font: '400 11px/1.3 var(--sans)', color: 'var(--text-3)' }}>{device()}</span>
             </div>
-            <div style={{ flex: '1 1 170px', display: 'flex', flexDirection: 'column', gap: 6, font: '400 10px/1.2 var(--mono)', color: 'var(--text-5)' }}>
+            <div style={{ flex: '1 1 170px', display: 'flex', flexDirection: 'column', gap: 6, font: '400 11px/1.4 var(--mono)', color: 'var(--text-4)' }}>
               <span>
                 user <span style={{ color: 'var(--text-2)' }}>{shortId(claims?.sub ?? session.userUuid)}</span> · ротаций во вкладке #{rotations}
               </span>
@@ -83,10 +83,10 @@ export function Sessions() {
             <div style={{ flex: '0 0 auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className="status-text c-ok">АКТИВНА</span>
               <button type="button" className="btn sm" onClick={rotate}>
-                ОБНОВИТЬ ТОКЕН
+                Обновить токен
               </button>
               <button type="button" className="btn-danger" style={{ padding: '8px 11px' }} onClick={doLogout}>
-                ВЫЙТИ
+                Выйти
               </button>
             </div>
           </div>
@@ -106,7 +106,7 @@ export function Sessions() {
 export function Users() {
   return (
     <>
-      <ScreenHeader code="04 · ДОСТУП" title="Пользователи" sub="Аккаунты на этом узле. Возраст считается по дате рождения при регистрации." />
+      <ScreenHeader code="04 · Доступ" title="Пользователи" sub="Аккаунты на этом узле. Возраст считается по дате рождения при регистрации." />
       <Unsupported
         title="Управление аккаунтами"
         text="В API v1 есть только регистрация и вход. Списка пользователей, ролей и блокировки нет — экран включится, когда Gateway получит admin-эндпоинты. Блокировка должна сразу отзывать все сессии пользователя."

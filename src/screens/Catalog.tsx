@@ -8,8 +8,8 @@ import { usePreview } from '../lib/usePreview';
 import { useCatalogIndex } from '../state/queries';
 import { useToast } from '../state/toast';
 
-type Filter = 'ВСЕ' | ReleaseType | '18+';
-const FILTERS: Filter[] = ['ВСЕ', 'АЛЬБОМ', 'EP', 'СИНГЛ', '18+'];
+type Filter = 'Все' | ReleaseType | '18+';
+const FILTERS: Filter[] = ['Все', 'Альбом', 'EP', 'Сингл', '18+'];
 
 function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => void }) {
   const navigate = useNavigate();
@@ -22,31 +22,33 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
   return (
     <div className="card">
       <div className="card-head">
-        <span className="label">РЕЛИЗ · {shortId(album.album_uuid)}</span>
+        <span className="label">
+          Релиз · <span className="mono">{shortId(album.album_uuid)}</span>
+        </span>
         <button type="button" className="icon-btn" onClick={onClose} aria-label="Закрыть">
           ×
         </button>
       </div>
       <div className="card-body" style={{ gap: 14 }}>
         <div className="field">
-          <span className="label-sm">НАЗВАНИЕ</span>
+          <span className="label-sm">Название</span>
           <div className="field-value" style={{ font: '600 15px/1.2 var(--sans)' }}>
             {album.album_name}
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>
           <div className="field">
-            <span className="label-sm">ИСПОЛНИТЕЛЬ</span>
+            <span className="label-sm">Исполнитель</span>
             <div className="field-value">{album.artist_name}</div>
           </div>
           <div className="field">
-            <span className="label-sm">ДОБАВЛЕН</span>
+            <span className="label-sm">Добавлен</span>
             <div className="field-value mono" style={{ fontSize: 12 }}>
               {fmtDate(album.created_at)}
             </div>
           </div>
           <div className="field">
-            <span className="label-sm">ТИП</span>
+            <span className="label-sm">Тип</span>
             <div className="field-value mono" style={{ fontSize: 12 }}>
               {releaseType(album.tracks.length)}
             </div>
@@ -56,7 +58,7 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
         <div className="stack" style={{ borderTop: '1px solid var(--card-line)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0 6px' }} className="label-sm">
             <span>
-              ТРЕКИ · {album.tracks.length} · {fmtDuration(total)}
+              Треки · {album.tracks.length} · {fmtDuration(total)}
             </span>
             <span>18+ · {explicit}</span>
           </div>
@@ -78,7 +80,7 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
                 <span className="t-title" title={t.track_name}>
                   {t.track_name}
                 </span>
-                <span style={{ font: '400 11px/1 var(--mono)', color: 'var(--text-5)', textAlign: 'right' }}>{fmtDuration(t.duration_ms)}</span>
+                <span style={{ font: '400 11.5px/1 var(--mono)', color: 'var(--text-4)', textAlign: 'right' }}>{fmtDuration(t.duration_ms)}</span>
                 <span className={`flag${t.explicit ? ' on' : ''}`}>{t.explicit ? '18+' : '—'}</span>
               </div>
             );
@@ -91,7 +93,7 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="button" className="btn-accent" onClick={() => navigate(`/releases?album=${album.album_uuid}`)}>
-            + ДОБАВИТЬ ТРЕКИ
+            + Добавить треки
           </button>
         </div>
       </div>
@@ -104,13 +106,13 @@ export function Catalog() {
   const navigate = useNavigate();
   const catalog = useCatalogIndex();
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('ВСЕ');
+  const [filter, setFilter] = useState<Filter>('Все');
 
   const albums = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('ru');
     return (catalog.data?.albums ?? []).filter((a) => {
       if (filter === '18+' && !a.tracks.some((t) => t.explicit)) return false;
-      if (filter !== 'ВСЕ' && filter !== '18+' && releaseType(a.tracks.length) !== filter) return false;
+      if (filter !== 'Все' && filter !== '18+' && releaseType(a.tracks.length) !== filter) return false;
       if (!q) return true;
       return (
         a.album_name.toLocaleLowerCase('ru').includes(q) ||
@@ -124,7 +126,7 @@ export function Catalog() {
 
   return (
     <>
-      <ScreenHeader code="03 · КАТАЛОГ" title="Каталог" sub="Релизы и треки узла, метки 18+ на уровне трека." />
+      <ScreenHeader code="03 · Каталог" title="Каталог" sub="Релизы и треки узла, метки 18+ на уровне трека." />
       <div className="stack gap-18">
         <div className="toolbar">
           <input
@@ -140,7 +142,7 @@ export function Catalog() {
             </Chip>
           ))}
           <button type="button" className="link-muted" style={{ marginLeft: 'auto' }} onClick={() => catalog.refetch()} disabled={catalog.isFetching}>
-            {catalog.isFetching ? 'ОБНОВЛЕНИЕ…' : 'ОБНОВИТЬ ↻'}
+            {catalog.isFetching ? 'Обновление…' : 'Обновить ↻'}
           </button>
         </div>
         <ErrorLine error={catalog.error} onRetry={() => catalog.refetch()} />

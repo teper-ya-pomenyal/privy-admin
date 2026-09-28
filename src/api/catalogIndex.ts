@@ -49,9 +49,9 @@ export async function loadCatalogIndex(): Promise<CatalogIndex> {
 }
 
 // Тип релиза в API не хранится — выводим по числу треков (подпись для UI).
-export type ReleaseType = 'АЛЬБОМ' | 'EP' | 'СИНГЛ';
+export type ReleaseType = 'Альбом' | 'EP' | 'Сингл';
 export function releaseType(trackCount: number): ReleaseType {
-  if (trackCount <= 1) return 'СИНГЛ';
+  if (trackCount <= 1) return 'Сингл';
   if (trackCount <= 6) return 'EP';
-  return 'АЛЬБОМ';
+  return 'Альбом';
 }

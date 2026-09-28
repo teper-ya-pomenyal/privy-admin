@@ -10,7 +10,6 @@ import { useToast } from '../state/toast';
 export interface NavItem {
   to: string;
   label: string;
-  short: string;
   mobile: string;
   count: string;
   hot: boolean;
@@ -33,13 +32,13 @@ function useNav(): NavItem[] {
   const errors = log.filter((l) => l.level === 'ERROR').length;
   const idx = catalog.data;
   return [
-    { to: '/', label: 'ОБЗОР', short: 'ОБ', mobile: 'ОБЗОР', count: '', hot: false },
-    { to: '/releases', label: 'РЕЛИЗЫ', short: 'РЛ', mobile: 'РЕЛИЗЫ', count: queueCount ? String(queueCount) : '', hot: busy },
-    { to: '/catalog', label: 'КАТАЛОГ', short: 'КТ', mobile: 'КАТАЛОГ', count: idx ? String(idx.albums.length) : '', hot: false },
-    { to: '/users', label: 'ПОЛЬЗОВАТЕЛИ', short: 'ПЛ', mobile: 'ЛЮДИ', count: '—', hot: false },
-    { to: '/sessions', label: 'СЕССИИ', short: 'СС', mobile: 'СЕССИИ', count: '1', hot: false },
-    { to: '/moderation', label: 'МЕТКИ 18+', short: '18', mobile: 'МЕТКИ', count: idx ? String(idx.explicitCount) : '', hot: false },
-    { to: '/logs', label: 'ЛОГИ', short: 'ЛГ', mobile: 'ЛОГИ', count: errors ? `${errors} ERR` : '', hot: errors > 0 },
+    { to: '/', label: 'Обзор', mobile: 'Обзор', count: '', hot: false },
+    { to: '/releases', label: 'Релизы', mobile: 'Релизы', count: queueCount ? String(queueCount) : '', hot: busy },
+    { to: '/catalog', label: 'Каталог', mobile: 'Каталог', count: idx ? String(idx.albums.length) : '', hot: false },
+    { to: '/users', label: 'Пользователи', mobile: 'Люди', count: '—', hot: false },
+    { to: '/sessions', label: 'Сессии', mobile: 'Сессии', count: '1', hot: false },
+    { to: '/moderation', label: 'Метки 18+', mobile: 'Метки', count: idx ? String(idx.explicitCount) : '', hot: false },
+    { to: '/logs', label: 'Логи', mobile: 'Логи', count: errors ? `${errors} ERR` : '', hot: errors > 0 },
   ];
 }
 
@@ -91,7 +90,7 @@ export function Shell() {
         <div className="header-right">
           <span className="user-login">{session?.userName}</span>
           <button type="button" className="btn sm" onClick={doLogout}>
-            ВЫХОД
+            Выйти
           </button>
         </div>
       </header>
@@ -132,7 +131,7 @@ export function Shell() {
               </button>
             ))}
             <button type="button" className="m-sheet-item danger" onClick={doLogout}>
-              <span>ВЫХОД</span>
+              <span>Выйти</span>
               <span className="tab-count">{session?.userName}</span>
             </button>
           </div>
@@ -141,13 +140,11 @@ export function Shell() {
       <nav className="m-nav" aria-label="Разделы">
         {mobileMain.map((n) => (
           <button key={n.to} type="button" className={`m-nav-item${isActive(n.to) ? ' active' : ''}`} onClick={() => navigate(n.to)}>
-            <b>{n.short}</b>
             <span>{n.mobile}</span>
           </button>
         ))}
         <button type="button" className={`m-nav-item${moreActive || moreOpen ? ' active' : ''}`} onClick={() => setMoreOpen((v) => !v)}>
-          <b>··</b>
-          <span>ЕЩЁ</span>
+          <span>Ещё</span>
         </button>
       </nav>
     </div>

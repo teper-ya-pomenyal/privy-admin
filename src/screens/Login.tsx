@@ -54,20 +54,20 @@ export function Login() {
         </div>
         <div className="card-body">
           <div className="stack gap-14" style={{ gap: 8 }}>
-            <div className="screen-code">{mode === 'login' ? 'ВХОД ВЛАДЕЛЬЦА' : 'РЕГИСТРАЦИЯ'}</div>
-            <div className="hint" style={{ fontSize: 11 }}>
-              узел {nodeHost()}
+            <div className="screen-code">{mode === 'login' ? 'Вход владельца' : 'Регистрация'}</div>
+            <div className="hint">
+              узел <span className="mono">{nodeHost()}</span>
             </div>
           </div>
           <div className="field">
             <label className="label-sm" htmlFor="login-user">
-              ЛОГИН
+              Логин
             </label>
             <input id="login-user" className="input mono" autoComplete="username" value={user} onChange={(e) => setUser(e.target.value)} autoFocus />
           </div>
           <div className="field">
             <label className="label-sm" htmlFor="login-pass">
-              ПАРОЛЬ
+              Пароль
             </label>
             <input
               id="login-pass"
@@ -82,7 +82,7 @@ export function Login() {
           {mode === 'register' && (
             <div className="field">
               <label className="label-sm" htmlFor="login-birth">
-                ДАТА РОЖДЕНИЯ
+                Дата рождения
               </label>
               <input id="login-birth" className="input mono" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />
               <span className="hint">по ней считается доступ к трекам 18+</span>
@@ -90,7 +90,7 @@ export function Login() {
           )}
           <ErrorLine error={error} />
           <button type="submit" className="btn-accent lg" disabled={!valid || busy}>
-            {busy ? '…' : mode === 'login' ? 'ВОЙТИ' : 'СОЗДАТЬ АККАУНТ'}
+            {busy ? '…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
           </button>
           <button
             type="button"
@@ -101,7 +101,7 @@ export function Login() {
               setError(null);
             }}
           >
-            {mode === 'login' ? 'ПЕРВЫЙ ЗАПУСК УЗЛА? РЕГИСТРАЦИЯ' : 'УЖЕ ЕСТЬ АККАУНТ? ВХОД'}
+            {mode === 'login' ? 'Первый запуск узла? Регистрация' : 'Уже есть аккаунт? Вход'}
           </button>
         </div>
       </form>

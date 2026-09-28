@@ -6,13 +6,13 @@ import { fmtClock } from '../lib/format';
 import { useRequestLog } from '../state/queries';
 
 const SVC: { key: LogService | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: 'ВСЕ' },
+  { key: 'ALL', label: 'Все' },
   { key: 'user_service', label: 'USER' },
   { key: 'catalog_service', label: 'CATALOG' },
   { key: 'streaming_service', label: 'STREAM' },
 ];
 const LVL = [
-  { key: 'ALL', label: 'ВСЕ УРОВНИ' },
+  { key: 'ALL', label: 'Все уровни' },
   { key: 'WARN', label: 'WARN+' },
   { key: 'ERROR', label: 'ERROR' },
 ];
@@ -48,7 +48,7 @@ export function Logs() {
   return (
     <>
       <ScreenHeader
-        code="07 · ЛОГИ"
+        code="07 · Логи"
         title="Логи"
         sub="HTTP-запросы этой админки к Gateway · последние 200. Серверные логи gRPC появятся с эндпоинтом GET /v1/admin/logs/stream."
       />
@@ -68,14 +68,14 @@ export function Logs() {
           <div style={{ marginLeft: 'auto' }}>
             <Chip on={!frozen} onClick={() => setFrozen(frozen ? null : live)}>
               <span className={`live-dot${frozen ? '' : ' on'}`} />
-              {frozen ? 'ПАУЗА' : 'LIVE'}
+              {frozen ? 'Пауза' : 'LIVE'}
             </Chip>
           </div>
         </div>
         <div className="log-panel">
           {rows.map((l) => (
             <div className="log-row" key={l.id}>
-              <span style={{ color: 'var(--text-6)', flex: 'none' }}>{fmtClock(l.at)}</span>
+              <span style={{ color: 'var(--text-5)', flex: 'none' }}>{fmtClock(l.at)}</span>
               <span style={{ flex: '0 0 40px', fontWeight: 600, color: lvlColor(l.level) }}>{l.level}</span>
               <span style={{ flex: '0 0 118px', color: 'var(--text-4)' }}>{l.service}</span>
               <span style={{ flex: '1 1 260px', minWidth: 0, overflowWrap: 'anywhere', color: 'var(--text-2)' }}>
@@ -85,7 +85,7 @@ export function Logs() {
               <span style={{ flex: '0 0 50px', textAlign: 'right', color: 'var(--text-5)' }}>{l.ms}ms</span>
             </div>
           ))}
-          {!rows.length && <div style={{ padding: '20px 12px', color: 'var(--text-6)' }}>Нет записей по фильтру.</div>}
+          {!rows.length && <div style={{ padding: '20px 12px', color: 'var(--text-5)' }}>Нет записей по фильтру.</div>}
         </div>
       </div>
     </>

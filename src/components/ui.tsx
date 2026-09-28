@@ -30,7 +30,7 @@ export function ErrorLine({ error, onRetry }: { error: unknown; onRetry?: () => 
       <span>{typeof error === 'string' ? error : errorLabel(error)}</span>
       {onRetry && (
         <button type="button" className="link" onClick={onRetry}>
-          ПОВТОРИТЬ
+          Повторить
         </button>
       )}
     </div>
@@ -80,11 +80,11 @@ export function SkeletonRows({ count = 5, cover = true }: { count?: number; cove
 export function Unsupported({ title, text, endpoints }: { title: string; text: ReactNode; endpoints: string[] }) {
   return (
     <div className="unsupported">
-      <div className="label">НЕТ В API V1</div>
+      <div className="label">Нет в API v1</div>
       <h3>{title}</h3>
       <p>{text}</p>
       <div className="label-sm" style={{ marginTop: 4 }}>
-        НУЖНЫ ЭНДПОИНТЫ GATEWAY
+        Нужны эндпоинты gateway
       </div>
       <ul>
         {endpoints.map((e) => (
@@ -97,7 +97,7 @@ export function Unsupported({ title, text, endpoints }: { title: string; text: R
 
 export function useConfirm() {
   const [req, setReq] = useState<{ title: string; text: string; action: string; resolve: (ok: boolean) => void } | null>(null);
-  const confirm = (title: string, text: string, action = 'ПОДТВЕРДИТЬ') =>
+  const confirm = (title: string, text: string, action = 'Подтвердить') =>
     new Promise<boolean>((resolve) => setReq({ title, text, action, resolve }));
   const close = (ok: boolean) => {
     req?.resolve(ok);
@@ -110,7 +110,7 @@ export function useConfirm() {
         <p>{req.text}</p>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={() => close(false)}>
-            ОТМЕНА
+            Отмена
           </button>
           <button type="button" className="btn-danger" onClick={() => close(true)} autoFocus>
             {req.action}

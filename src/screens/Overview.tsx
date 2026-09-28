@@ -15,7 +15,7 @@ function ServiceCard({ s, onClick }: { s: ServiceProbe; onClick: () => void }) {
         <span className="svc-name">{s.name}</span>
         <span className={`tag ${STATUS_CLASS[s.status]}`}>{s.status}</span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, font: '400 10px/1 var(--mono)', color: 'var(--text-5)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, font: '400 11px/1.2 var(--mono)', color: 'var(--text-4)' }}>
         <span>{s.proto}</span>
         <span style={{ color: 'var(--text-3)' }}>{s.ms === null ? '—' : `${s.ms} ms`}</span>
       </div>
@@ -44,14 +44,14 @@ export function Overview() {
 
   const counters = [
     {
-      label: 'РЕЛИЗОВ',
+      label: 'Релизов',
       value: idx ? idx.albums.length : '…',
       sub: idx ? `${idx.trackCount} ${plural(idx.trackCount, ['трек', 'трека', 'треков'])}` : 'загрузка каталога',
       to: '/catalog',
     },
-    { label: 'ИСПОЛНИТЕЛЕЙ', value: idx ? idx.artists.length : '…', sub: 'в каталоге узла', to: '/catalog' },
-    { label: 'ТРЕКОВ 18+', value: idx ? idx.explicitCount : '…', sub: 'флаг explicit', to: '/moderation' },
-    { label: 'В ЗАГРУЗКЕ', value: inQueue + inDraft, sub: `${inDraft} в черновике`, to: '/releases' },
+    { label: 'Исполнителей', value: idx ? idx.artists.length : '…', sub: 'в каталоге узла', to: '/catalog' },
+    { label: 'Треков 18+', value: idx ? idx.explicitCount : '…', sub: 'флаг explicit', to: '/moderation' },
+    { label: 'В загрузке', value: inQueue + inDraft, sub: `${inDraft} в черновике`, to: '/releases' },
   ];
 
   const alerts = [
@@ -75,7 +75,7 @@ export function Overview() {
 
   return (
     <>
-      <ScreenHeader code="01 · ОБЗОР" title="Состояние узла" sub="Сервисы, каталог и то, что требует внимания." />
+      <ScreenHeader code="01 · Обзор" title="Состояние узла" sub="Сервисы, каталог и то, что требует внимания." />
       <div className="stack gap-30">
         <ErrorLine error={catalog.error} onRetry={() => catalog.refetch()} />
 
@@ -91,7 +91,7 @@ export function Overview() {
 
         <div className="section">
           <div className="section-head">
-            <div className="label">СЕРВИСЫ · ЧЕРЕЗ GATEWAY</div>
+            <div className="label">Сервисы · через gateway</div>
             <div className="hint">проверка каждые 10 с · клик → запросы к сервису</div>
           </div>
           <div className="svc-grid">
@@ -107,36 +107,36 @@ export function Overview() {
 
         <div className="bottom-grid">
           <div className="section">
-            <div className="label">ЗАГРУЗКА</div>
+            <div className="label">Загрузка</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10 }}>
               <span style={{ font: '700 26px/1 var(--sans)' }}>
                 {inQueue + inDraft} {plural(inQueue + inDraft, ['файл', 'файла', 'файлов'])}
               </span>
-              <span style={{ font: '400 12px/1 var(--mono)', color: 'var(--text-5)' }}>в этой вкладке</span>
+              <span className="hint">в этой вкладке</span>
             </div>
             <div style={{ height: 6, background: 'var(--line)', display: 'flex' }}>
               <div style={{ width: `${readyShare * 100}%`, background: 'var(--text)', transition: 'width .4s' }} />
             </div>
             <button type="button" className="open-row" onClick={() => navigate('/releases')}>
               <span>{uploadLabel}</span>
-              <span className="link">ОТКРЫТЬ →</span>
+              <span className="link">Открыть →</span>
             </button>
           </div>
           <div className="section">
             <div className="section-head">
-              <div className="label">ПРЕДУПРЕЖДЕНИЯ</div>
+              <div className="label">Предупреждения</div>
               <button type="button" className="link" onClick={() => navigate('/logs')}>
-                ВСЕ ЛОГИ →
+                Все логи →
               </button>
             </div>
             <div className="stack">
               {alerts.length ? (
                 alerts.map((a) => (
                   <div key={a.key} className="alert-row">
-                    <span className="c-dim" style={{ flex: 'none' }}>
+                    <span className="mono c-dim" style={{ flex: 'none', fontSize: 11.5 }}>
                       {a.t}
                     </span>
-                    <span style={{ width: 42, flex: 'none', color: a.lvl === 'ERROR' ? 'var(--err)' : 'var(--warn)' }}>{a.lvl}</span>
+                    <span className="mono" style={{ width: 42, flex: 'none', fontSize: 11, fontWeight: 600, color: a.lvl === 'ERROR' ? 'var(--err)' : 'var(--warn)' }}>{a.lvl}</span>
                     <span style={{ color: 'var(--text-3)', minWidth: 0, overflowWrap: 'anywhere' }}>{a.text}</span>
                   </div>
                 ))
