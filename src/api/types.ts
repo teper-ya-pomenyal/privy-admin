@@ -48,6 +48,8 @@ export interface LightTrack {
 export interface TrackPath {
   path: string;
   duration_ms: number;
+  /** С версии с обложками: чтобы найти альбом трека без доп. запросов. */
+  album_uuid: string;
 }
 
 export interface TrackDetails {
@@ -70,6 +72,7 @@ export interface AddTrackRequest {
   duration_ms?: number;
 }
 
+/** Ответ загрузки файла трека и обложек (трек/альбом) — один и тот же формат. */
 export interface TrackFileResponse {
   path: string;
   size: number;
@@ -95,6 +98,8 @@ export interface Album {
   artist_uuid: string;
   album_name: string;
   created_at: string;
+  /** Путь обложки в хранилище, пустая строка — обложки нет. Файл API v1 не отдаёт — только путь. */
+  cover_path: string;
 }
 
 export interface AddAlbumRequest {

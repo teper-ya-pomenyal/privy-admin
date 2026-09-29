@@ -40,6 +40,18 @@ export const catalog = {
     form.append('file', file, file.name);
     return uploadForm<TrackFileResponse>(`/catalog/tracks/${enc(id)}/file`, form, onProgress, signal);
   },
+  // Обложки: путь генерирует сервер, формат — jpg/jpeg/png/webp/gif. Обложка
+  // трека становится обложкой его альбома и всех треков (SetTrackCover/SetAlbumCover).
+  uploadTrackCover: (id: string, file: File, onProgress: (f: number) => void, signal?: AbortSignal) => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return uploadForm<TrackFileResponse>(`/catalog/tracks/${enc(id)}/cover`, form, onProgress, signal);
+  },
+  uploadAlbumCover: (id: string, file: File, onProgress: (f: number) => void, signal?: AbortSignal) => {
+    const form = new FormData();
+    form.append('file', file, file.name);
+    return uploadForm<TrackFileResponse>(`/catalog/albums/${enc(id)}/cover`, form, onProgress, signal);
+  },
 
   searchArtists: (artist_name: string, page: Page = {}) =>
     request<Artist[]>('GET', '/catalog/artists/search', { query: { artist_name, ...page } }),

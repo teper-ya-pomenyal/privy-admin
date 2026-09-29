@@ -1,15 +1,100 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { releaseType, type AlbumEntry, type ReleaseType } from '../api/catalogIndex';
 import { errorLabel } from '../api/http';
+import { catalog as catalogApi } from '../api/endpoints';
 import { Chip, Cover, ErrorLine, ScreenHeader, SkeletonRows } from '../components/ui';
 import { fmtDate, fmtDuration, pad2, shortId } from '../lib/format';
+import { imageSize } from '../lib/metadata';
 import { usePreview } from '../lib/usePreview';
-import { useCatalogIndex } from '../state/queries';
+import { CATALOG_KEY, useCatalogIndex } from '../state/queries';
+import { COVER_EXTENSIONS, COVER_MAX_SIDE } from '../state/releases';
 import { useToast } from '../state/toast';
 
 type Filter = 'Все' | ReleaseType | '18+';
 const FILTERS: Filter[] = ['Все', 'Альбом', 'EP', 'Сингл', '18+'];
+
+// Обложка релиза: контракт v1 умеет только загружать файл (POST /cover) и
+// отдавать путь (Album.cover_path) — самого файла API пока не отдаёт, поэтому
+// здесь статус «есть/нет», загрузка и замена, без превью с узла.
+function AlbumCover({ albumUuid }: { albumUuid: string }) {
+  const toast = useToast();
+  const qc = useQueryClient();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const albumQ = useQuery({ queryKey: ['album', albumUuid], queryFn: () => catalogApi.getAlbum(albumUuid), staleTime: 60_000 });
+  const [progress, setProgress] = useState<number | null>(null);
+  const has = !!albumQ.data?.cover_path;
+
+  const pick = async (file: File | undefined) => {
+    if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!COVER_EXTENSIONS.includes(ext)) {
+      toast(`Формат .${ext || '—'} узел не примет — обложка: ${COVER_EXTENSIONS.join(', ')}`);
+      return;
+    }
+    const size = await imageSize(file);
+    if (!size || size.w > COVER_MAX_SIDE || size.h > COVER_MAX_SIDE) {
+      toast(
+        size
+          ? `Обложка ${size.w}×${size.h} — больше лимита ${COVER_MAX_SIDE}×${COVER_MAX_SIDE}, не принята`
+          : 'Обложку не удалось прочитать — не принята',
+      );
+      return;
+    }
+    setProgress(0);
+    try {
+      await catalogApi.uploadAlbumCover(albumUuid, file, setProgress);
+      toast(has ? 'Обложка заменена — у альбома и всех его треков' : 'Обложка загружена — у альбома и всех его треков');
+      qc.invalidateQueries({ queryKey: ['album', albumUuid] });
+      qc.invalidateQueries({ queryKey: CATALOG_KEY });
+    } catch (e) {
+      toast(`Обложка не загрузилась · ${errorLabel(e)}`);
+    } finally {
+      setProgress(null);
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative', flex: 'none' }}>
+      <button
+        type="button"
+        className={`draft-cover${has ? ' has-image' : ''}`}
+        title={has ? 'Заменить обложку' : 'Загрузить обложку'}
+        aria-label={has ? 'Заменить обложку' : 'Загрузить обложку'}
+        disabled={progress !== null || albumQ.isPending}
+        onClick={() => fileInput.current?.click()}
+      >
+        {albumQ.isPending ? (
+          '…'
+        ) : has ? (
+          <span style={{ font: '700 20px/1 var(--sans)', color: 'var(--ok)' }}>✓</span>
+        ) : (
+          <>
+            нет
+            <br />
+            обложки
+          </>
+        )}
+      </button>
+      {progress !== null && (
+        <div className="bar" style={{ position: 'absolute', left: 4, right: 4, bottom: 6 }}>
+          <div style={{ width: `${Math.max(4, Math.round(progress * 100))}%`, background: 'var(--accent)' }} />
+        </div>
+      )}
+      <input
+        ref={fileInput}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        hidden
+        onChange={(e) => {
+          void pick(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+    </div>
+  );
+}
 
 function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => void }) {
   const navigate = useNavigate();
@@ -30,10 +115,19 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
         </button>
       </div>
       <div className="card-body" style={{ gap: 14 }}>
-        <div className="field">
-          <span className="label-sm">Название</span>
-          <div className="field-value" style={{ font: '600 15px/1.2 var(--sans)' }}>
-            {album.album_name}
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <AlbumCover albumUuid={album.album_uuid} />
+          <div className="stack" style={{ flex: 1, minWidth: 0, gap: 7 }}>
+            <div className="field">
+              <span className="label-sm">Название</span>
+              <div className="field-value" style={{ font: '600 15px/1.2 var(--sans)' }}>
+                {album.album_name}
+              </div>
+            </div>
+            <span className="hint">
+              jpg · jpeg · png · webp · gif, до 3000×3000. Обложка запишется альбому и всем его трекам; сам файл API v1
+              пока не отдаёт — виден только статус.
+            </span>
           </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10 }}>

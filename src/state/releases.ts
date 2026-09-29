@@ -49,9 +49,12 @@ export interface Draft {
   /** Имя артиста, на карточку которого указывает artistUuid (выбор из подсказок). */
   artistName?: string;
   albumUuid?: string;
-  /** Обложка — только локальный предпросмотр: API v1 обложки не принимает. */
+  /** Обложка уезжает на узел в конце публикации (POST /catalog/albums/{id}/cover). */
   cover?: File;
   coverUrl?: string;
+  /** Прогресс и статус загрузки обложки внутри публикации. */
+  coverUploaded?: boolean;
+  coverProgress?: number;
   publishing: boolean;
   error?: string;
 }
@@ -175,15 +178,19 @@ export function updateDraft(patch: Partial<Pick<Draft, 'title' | 'artist' | 'art
   setDraft((d) => ({ ...d, ...patch }));
 }
 
-/** Обложка живёт только в этой вкладке: превью через object URL, на сервер не уходит.
+/** Обложка живёт в этой вкладке (превью через object URL), на узел уходит в publishDraft.
     Картинки больше COVER_MAX_SIDE×COVER_MAX_SIDE отклоняет pickCover на экране. */
 export const COVER_MAX_SIDE = 3000;
+
+/** Белый список форматов обложек из контракта (POST /cover, сервер отвергает остальное). */
+export const COVER_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
 
 export function setDraftCover(file: File | undefined) {
   if (state.draft.publishing) return;
   setDraft((d) => {
     if (d.coverUrl) URL.revokeObjectURL(d.coverUrl);
-    return { ...d, cover: file, coverUrl: file ? URL.createObjectURL(file) : undefined };
+    // новая картинка — новый прогон загрузки
+    return { ...d, cover: file, coverUrl: file ? URL.createObjectURL(file) : undefined, coverUploaded: undefined, coverProgress: undefined };
   });
 }
 
@@ -312,6 +319,15 @@ export async function publishDraft(): Promise<PublishResult> {
         patchTrack(t.id, { phase: 'error', error: errorLabel(e) });
         throw e;
       }
+    }
+
+    // Обложка — после файлов треков и до позиций: при сбое «Продолжить» повторит
+    // только её — треки уже залиты (trackUuid/uploaded), позиции ещё не отправлялись.
+    const coverFile = state.draft.cover;
+    if (coverFile && !state.draft.coverUploaded) {
+      setDraft((d) => ({ ...d, coverProgress: 0 }));
+      await catalog.uploadAlbumCover(albumUuid, coverFile, (p) => setDraft((d) => ({ ...d, coverProgress: p })));
+      setDraft((d) => ({ ...d, coverUploaded: true }));
     }
 
     // Позиции в трек-листе — одним запросом, когда все файлы на месте.

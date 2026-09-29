@@ -25,6 +25,7 @@ import {
   updateTrack,
   useReleases,
   COVER_MAX_SIDE,
+  COVER_EXTENSIONS,
   type DraftTrack,
   type QueueItem,
 } from '../state/releases';
@@ -162,33 +163,40 @@ export function Releases() {
     setParams({}, { replace: true });
   }, [albumParam, catalog.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Обложка больше 3000×3000 не принимается: превью держим в памяти вкладки.
-  const pickCover = async (file: File | undefined) => {
-    if (!file) {
-      setDraftCover(undefined);
-      return;
+  // Обложка поедет на узел в публикации: фильтруем формат (белый список
+  // контракта) и размер до 3000×3000 ещё до загрузки. Возвращает причину
+  // отказа: из зоны она попадает в сводный тост очереди, из кнопки — тостится сама.
+  const pickCover = async (file: File | undefined, notify = true): Promise<string | undefined> => {
+    if (!file) return undefined;
+    const fail = (msg: string) => {
+      if (notify) toast(msg);
+      return msg;
+    };
+    const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+    if (!COVER_EXTENSIONS.includes(ext)) {
+      return fail(`Формат .${ext || '—'} узел не примет — обложка: ${COVER_EXTENSIONS.join(', ')}`);
     }
     const size = await imageSize(file);
     if (!size || size.w > COVER_MAX_SIDE || size.h > COVER_MAX_SIDE) {
-      toast(
+      return fail(
         size
           ? `Обложка ${size.w}×${size.h} — больше лимита ${COVER_MAX_SIDE}×${COVER_MAX_SIDE}, не принята`
           : 'Обложку не удалось прочитать — не принята',
       );
-      return;
     }
     setDraftCover(file);
+    return undefined;
   };
 
-  const ingest = (files: File[]) => {
+  const ingest = async (files: File[]) => {
     if (!files.length) return;
-    // Картинка из общей зоны не теряется: первая уходит в обложку-предпросмотр.
+    // Картинка из общей зоны не теряется: первая уходит в обложку релиза.
     const image = files.find(isImage);
-    if (image) void pickCover(image);
+    const coverFail = image ? await pickCover(image, false) : undefined;
     const r = addFiles(files);
     const parts = [`В очередь: ${r.added}`];
     if (r.duplicates) parts.push(`повторов ${r.duplicates}`);
-    if (r.images) parts.push('обложка — только предпросмотр');
+    if (r.images) parts.push(coverFail ?? 'картинка — в обложку релиза');
     if (r.other) parts.push(`не аудио ${r.other}`);
     toast(parts.join(' · '));
   };
@@ -278,7 +286,7 @@ export function Releases() {
             onDrop={onDrop}
           >
             <div className="dropzone-title">Перетащи файлы или папку релиза</div>
-            <div className="note">FLAC · ALAC · WAV · MP3 · изображение из зоны станет обложкой-предпросмотром</div>
+            <div className="note">FLAC · ALAC · WAV · MP3 · изображение из зоны станет обложкой релиза</div>
             <div style={{ display: 'flex', gap: 8 }}>
               <span className="btn">Выбрать файлы</span>
               <button
@@ -344,7 +352,8 @@ export function Releases() {
           </div>
           <div className="card-body">
             <div className="hint">
-              Обложка — только локальный предпросмотр (до 3000×3000): API v1 обложки не принимает, на узел она не отправляется.
+              Обложка уедет на узел вместе с релизом — POST /catalog/albums/{'{id}'}/cover — и станет обложкой альбома и всех
+              его треков. До 3000×3000, {COVER_EXTENSIONS.join(' · ')}.
             </div>
             <div className="hint">
               Очередь и черновик живут только в этой вкладке: перезагрузка или закрытие страницы их сбросит.
@@ -356,7 +365,7 @@ export function Releases() {
                   className={`draft-cover${draft.coverUrl ? ' has-image' : ''}`}
                   onClick={() => coverInput.current?.click()}
                   disabled={draft.publishing}
-                  title={draft.cover ? draft.cover.name : 'Выбрать обложку (предпросмотр, не отправляется)'}
+                  title={draft.cover ? draft.cover.name : 'Выбрать обложку релиза'}
                   aria-label="Обложка релиза"
                 >
                   {draft.coverUrl ? (
@@ -369,6 +378,11 @@ export function Releases() {
                     </>
                   )}
                 </button>
+                {draft.publishing && draft.cover && !draft.coverUploaded && (
+                  <div className="bar" style={{ position: 'absolute', left: 4, right: 4, bottom: 4 }}>
+                    <div style={{ width: `${Math.max(4, Math.round((draft.coverProgress ?? 0) * 100))}%`, background: 'var(--accent)' }} />
+                  </div>
+                )}
                 {draft.coverUrl && (
                   <button type="button" className="cover-remove" title="Убрать обложку" onClick={() => setDraftCover(undefined)}>
                     ×

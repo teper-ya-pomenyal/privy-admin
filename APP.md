@@ -21,8 +21,8 @@ npm run build      # dist/ — статика под base /admin/
 |---|---|---|
 | Вход | `POST /login`, `POST /register`; `POST /refresh` (single-flight, ротация пары), `POST /logout` | роли OWNER в JWT нет — войти может любой аккаунт |
 | Обзор | косвенные пробы: `GET /catalog/tracks/{0}/exists` (без токена → gateway, с токеном → catalog), `POST /refresh` с мусорным токеном → user_service, `GET /stream/{0}` → streaming_service | нет `/admin/health`, postgres/redis и диск не видны |
-| Релизы | разбор тегов в браузере (`music-metadata`), затем `GET /catalog/artists/search` / `POST /catalog/artists` → `POST /catalog/albums` → на каждый трек `POST /catalog/tracks` + `POST /catalog/tracks/{id}/file` (с прогрессом) → `POST /catalog/albums/{id}/tracks` (позиции) | нет обложек, года, жанра, типа; очередь живёт только во вкладке; после ошибки публикация продолжается с места остановки |
-| Каталог | `GET /catalog/artists/search?artist_name=%` → `/artists/{id}/albums` → `/albums/{id}/tracks`; превью — `GET /stream/{id}` | только чтение + дозаливка треков в релиз; нет обновления/удаления |
+| Релизы | разбор тегов в браузере (`music-metadata`), затем `GET /catalog/artists/search` / `POST /catalog/artists` → `POST /catalog/albums` → на каждый трек `POST /catalog/tracks` + `POST /catalog/tracks/{id}/file` (с прогрессом) → обложка `POST /catalog/albums/{id}/cover` (jpg/jpeg/png/webp/gif, до 3000×3000) → `POST /catalog/albums/{id}/tracks` (позиции) | нет года, жанра, типа (тип выводится из числа треков); очередь живёт только во вкладке; после ошибки публикация продолжается с места остановки |
+| Каталог | `GET /catalog/artists/search?artist_name=%` → `/artists/{id}/albums` → `/albums/{id}/tracks`; превью — `GET /stream/{id}`; обложка релиза — статус из `Album.cover_path`, загрузка/замена `POST /catalog/albums/{id}/cover` | только чтение + дозаливка треков и обложки; нет обновления/удаления; файла обложки API v1 не отдаёт — виден только факт её наличия |
 | Метки 18+ | флаг `explicit` из каталога; выставляется при создании трека (тумблер + автоопределение по тегам) | нельзя менять у существующего трека, нет очереди жалоб |
 | Сессии | текущая сессия: claims access-токена, ручной `/refresh`, `/logout` | нет списка сессий/семей и отзыва чужих |
 | Пользователи | — | нет эндпоинтов, экран-заглушка с нужными ручками |
@@ -39,7 +39,11 @@ npm run build      # dist/ — статика под base /admin/
 
 - CORS в Gateway не разрешает `PATCH` (понадобится для admin-ручек) и заголовок `Range`.
 - `LightTrack` из `GET /albums/{id}/tracks` не содержит `position` — при дозаливке следующая позиция считается как «число треков + 1».
-- `AddTrackFile` требует, чтобы `path` был задан заранее в `AddTrack`; админка генерирует `{album_uuid}/{NN}-{rand}.{ext}`.
+- Пути треков и обложек генерирует сервер (`{album_uuid}/{uuid}{ext}`), клиент шлёт только подсказку расширения;
+  реальный путь приходит в ответе (`TrackDetails.path`, обложки — `{path, size}`).
+- Обложки: `POST /catalog/tracks/{id}/cover` и `POST /catalog/albums/{id}/cover` пишут путь альбому и всем его трекам
+  одной транзакцией; **эндпоинта чтения файла обложки в API v1 нет** — в каталоге показан только статус из
+  `Album.cover_path`. Для превью с узла понадобится `GET`-ручка хранилища (или раздача статики gateway).
 
 ## Структура
 
