@@ -89,6 +89,12 @@ export function Login() {
               <span className="hint">по ней считается доступ к трекам 18+</span>
             </div>
           )}
+          {mode === 'register' && (
+            <div className="hint c-warn" role="note">
+              Первый аккаунт узла получает роль владельца — только она открывает управление каталогом. Следующие
+              аккаунты будут слушателями без прав.
+            </div>
+          )}
           <ErrorLine error={error} />
           <button type="submit" className="btn-accent lg" disabled={!valid || busy}>
             {busy ? '…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}

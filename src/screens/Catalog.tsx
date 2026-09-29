@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { releaseType, type AlbumEntry, type ReleaseType } from '../api/catalogIndex';
 import { errorLabel } from '../api/http';
@@ -266,8 +266,23 @@ export function Catalog() {
   const { id } = useParams();
   const navigate = useNavigate();
   const catalog = useCatalogIndex();
-  const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<Filter>('Все');
+  // Запрос и фильтр живут в URL: ссылку с результатом можно сохранить или передать
+  const [params, setParams] = useSearchParams();
+  const query = params.get('q') ?? '';
+  const filter = (params.get('f') as Filter) ?? 'Все';
+
+  const setQuery = (q: string) => {
+    const next = new URLSearchParams(params);
+    if (q) next.set('q', q);
+    else next.delete('q');
+    setParams(next, { replace: true });
+  };
+  const setFilter = (f: Filter) => {
+    const next = new URLSearchParams(params);
+    if (f !== 'Все') next.set('f', f);
+    else next.delete('f');
+    setParams(next, { replace: true });
+  };
 
   const albums = useMemo(() => {
     const q = query.trim().toLocaleLowerCase('ru');

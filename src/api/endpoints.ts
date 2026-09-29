@@ -2,6 +2,11 @@ import { ApiError, rawRequest, request, uploadForm } from './http';
 import type {
   AddAlbumRequest,
   AddTrackRequest,
+  AdminHealth,
+  AdminLogsPage,
+  AdminModerationPage,
+  AdminSession,
+  AdminUsersPage,
   Album,
   AlbumTrackInput,
   Artist,
@@ -9,6 +14,7 @@ import type {
   AuthResponse,
   LightAlbum,
   LightTrack,
+  ModerationFilter,
   Page,
   RegisterRequest,
   Track,
@@ -73,6 +79,34 @@ export const catalog = {
   addAlbum: (body: AddAlbumRequest) => request<Album>('POST', '/catalog/albums', { body }),
   addTracksToAlbum: (id: string, tracks: AlbumTrackInput[]) =>
     request<void>('POST', `/catalog/albums/${enc(id)}/tracks`, { body: { tracks } }),
+};
+
+// ---------- admin: только владелец узла (gateway отвечает 403 остальным) ----------
+
+export const admin = {
+  health: () => request<AdminHealth>('GET', '/admin/health', { silent: true }),
+  // Журнал узла: gateway + user_service + catalog_service, новые первыми.
+  logs: (limit = 200, service?: string, level?: string) =>
+    request<AdminLogsPage>('GET', '/admin/logs', { query: { limit, service, level }, silent: true }),
+
+  // Сессии пользователя (user_uuid обязателен): список и отзыв по хэшам токенов.
+  sessions: (user: string) => request<{ sessions: AdminSession[] }>('GET', '/admin/sessions', { query: { user } }),
+  revokeSession: (user: string, session_id: string) =>
+    request<void>('DELETE', `/admin/sessions/${enc(session_id)}`, { query: { user } }),
+  revokeOthers: (user: string, keep_session_id: string) =>
+    request<void>('POST', '/admin/sessions/revoke-others', { body: { user, keep_session_id } }),
+
+  users: (page: Page = {}) => request<AdminUsersPage>('GET', '/admin/users', { query: { ...page } }),
+  // Блокировка сразу отзывает все сессии аккаунта и не пускает его во вход.
+  setUserBlocked: (id: string, blocked: boolean) =>
+    request<void>('PATCH', `/admin/users/${enc(id)}`, { body: { blocked } }),
+
+  moderation: (opts: { explicit?: ModerationFilter; limit?: number; offset?: number } = {}) =>
+    request<AdminModerationPage>('GET', '/admin/moderation', {
+      query: { explicit: opts.explicit, limit: opts.limit, offset: opts.offset },
+    }),
+  setExplicit: (id: string, explicit: boolean) =>
+    request<void>('PATCH', `/admin/moderation/${enc(id)}`, { body: { explicit } }),
 };
 
 // ---------- stream ----------

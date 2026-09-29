@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import { auth } from '../api/endpoints';
-import { getSession, setSession, subscribeSession } from '../api/session';
+import { decodeClaims, getSession, setSession, subscribeSession } from '../api/session';
 import type { AuthResponse } from '../api/types';
 
 export function useSession() {
@@ -14,6 +14,8 @@ function store(userName: string, res: AuthResponse) {
     birthDate: res.birth_date,
     accessToken: res.access_token,
     refreshToken: res.refresh_token,
+    // Роль решает gateway: запись в каталог без неё отвечает 403 (RequireOwner).
+    role: decodeClaims(res.access_token)?.role,
   });
 }
 

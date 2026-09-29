@@ -12,7 +12,11 @@ import { CATALOG_KEY, useCatalogIndex } from '../state/queries';
 import {
   addFiles,
   addToDraft,
+  attachFiles,
+  clearRestored,
+  flushDraft,
   isDraftLocked,
+  missingFileCount,
   moveTrack,
   publishDraft,
   removeFromQueue,
@@ -21,6 +25,7 @@ import {
   returnToQueue,
   setDraftTarget,
   setDraftCover,
+  trackNeedsFile,
   updateDraft,
   updateTrack,
   useReleases,
@@ -31,25 +36,32 @@ import {
 } from '../state/releases';
 import { useToast } from '../state/toast';
 
+/** Имя потерянного файла из ключа «имя:размер:mtime» (имя может содержать двоеточия). */
+const storedName = (key: string | undefined) => (key ? key.split(':').slice(0, -2).join(':') : '');
+
 function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
   const m = q.meta;
-  const meta = m
-    ? [fmtBytes(q.file.size), fmtDuration(m.durationMs), audioQuality(m) || m.codec, m.explicit ? '18+ из тегов' : ''].filter(Boolean).join(' · ')
-    : `${fmtBytes(q.file.size)} · ${extOf(q.file.name).toUpperCase()}`;
+  const missing = !q.file;
+  const meta = missing
+    ? [fmtDuration(m?.durationMs), 'файл не прикреплён'].filter(Boolean).join(' · ')
+    : m
+      ? [fmtBytes(q.file!.size), fmtDuration(m.durationMs), audioQuality(m) || m.codec, m.explicit ? '18+ из тегов' : ''].filter(Boolean).join(' · ')
+      : `${fmtBytes(q.file!.size)} · ${extOf(q.file!.name).toUpperCase()}`;
   const width = q.stage === 'READY' || q.stage === 'ERROR' ? 100 : 50;
   const color = q.stage === 'PROBE' ? 'var(--accent)' : q.stage === 'ERROR' ? 'var(--err)' : 'var(--stroke)';
   return (
-    <div className="q-row">
+    <div className={`q-row${missing ? ' missing' : ''}`}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-          <span className="q-name" title={q.file.webkitRelativePath || q.file.name}>
-            {q.file.name}
+          <span className="q-name" title={q.file?.webkitRelativePath || q.file?.name || storedName(q.expectKey)}>
+            {q.file?.name || storedName(q.expectKey) || 'файл'}
           </span>
           <span style={{ font: '400 11px/1.3 var(--mono)', color: 'var(--text-4)' }}>{meta}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
           {q.stage === 'PROBE' && <span className="stage">PROBE · TAGS</span>}
           {q.stage === 'READY' && <span className="stage c-ok">ГОТОВ</span>}
+          {q.stage === 'MISSING' && <span className="stage c-warn">НЕТ ФАЙЛА</span>}
           {q.stage === 'ERROR' && (
             <>
               <span className="stage c-err">ОШИБКА</span>
@@ -77,6 +89,7 @@ function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
 }
 
 function phaseLabel(t: DraftTrack) {
+  if (!t.file && trackNeedsFile(t)) return 'НЕТ ФАЙЛА';
   switch (t.phase) {
     case 'index':
       return 'INDEX';
@@ -88,8 +101,9 @@ function phaseLabel(t: DraftTrack) {
       return 'ГОТОВ';
     case 'error':
       return 'ОШИБКА';
+    // Статус «ожидает» виден всегда: у публикации честная очередь шагов
     default:
-      return t.trackUuid ? 'СОЗДАН' : '';
+      return t.trackUuid ? 'СОЗДАН' : 'ОЖИДАЕТ';
   }
 }
 
@@ -105,24 +119,32 @@ export function Releases() {
   const filesInput = useRef<HTMLInputElement>(null);
   const dirInput = useRef<HTMLInputElement>(null);
   const coverInput = useRef<HTMLInputElement>(null);
+  const attachInput = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dropIdx, setDropIdx] = useState<number | null>(null);
 
   const locked = isDraftLocked(draft);
   const existing = draft.target.kind === 'existing' ? draft.target : null;
+  const missing = missingFileCount(state);
 
-  // Файлы очереди и черновика существуют только в памяти вкладки: перезагрузка
-  // или закрытие теряют их безвозвратно — просим подтверждение у браузера
+  // Метаданные черновика переживают перезагрузку (localStorage), File — нет:
+  // предупреждаем только когда терять нечего, и сбрасываем буфер сохранения.
   const unsaved = queue.length > 0 || draft.tracks.length > 0 || draft.publishing;
   useEffect(() => {
     if (!unsaved) return;
     const warn = (e: BeforeUnloadEvent) => {
+      flushDraft();
       e.preventDefault();
       e.returnValue = '';
     };
+    const hide = () => flushDraft();
     window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
+    window.addEventListener('pagehide', hide);
+    return () => {
+      window.removeEventListener('beforeunload', warn);
+      window.removeEventListener('pagehide', hide);
+    };
   }, [unsaved]);
 
   // Подсказки артиста: имя ищется в каталоге узла с debounce, выбор подставляет
@@ -212,8 +234,14 @@ export function Releases() {
   const totalMs = draft.tracks.reduce((s, t) => s + (t.meta.durationMs ?? 0), 0);
   const type = releaseType((existing?.basePosition ?? 0) + draft.tracks.length);
   const untitled = draft.tracks.filter((t) => !t.title.trim()).length;
-  const canPublish = !!draft.title.trim() && !!draft.artist.trim() && draft.tracks.length > 0 && !untitled && !draft.publishing;
+  const lostTracks = draft.tracks.filter((t) => !t.file && trackNeedsFile(t)).length;
+  const canPublish = !!draft.title.trim() && !!draft.artist.trim() && draft.tracks.length > 0 && !untitled && !lostTracks && !draft.publishing;
   const resumable = !draft.publishing && (!!draft.albumUuid || draft.tracks.some((t) => t.trackUuid));
+
+  const attach = (files: File[]) => {
+    const n = attachFiles(files);
+    toast(n ? `Прикреплено файлов: ${n}` : 'Совпадений по имени и размеру не нашлось — проверь, те ли файлы выбраны');
+  };
 
   const addAll = () => {
     const n = addToDraft();
@@ -268,7 +296,36 @@ export function Releases() {
       <ScreenHeader
         code="02 · Загрузка"
         title="Релизы"
-        sub="Файлы разбираются в браузере, затем собираются в релиз и заливаются на узел. Сингл — это альбом с одним треком."
+        sub="Файлы разбираются в браузере, затем собираются в релиз и заливаются на узел. Сингл — это альбом с одним треком. Порядок треков меняется перетаскиванием или кнопками ↑ ↓."
+      />
+      {state.restored && (
+        <div className="restore-note" role="status">
+          <span>
+            Черновик восстановлен после перезагрузки: названия, порядок и статусы публикации на месте
+            {missing ? ` · ждут повторного выбора файлов: ${missing}` : ''}. Сами файлы браузер сохранить не может.
+          </span>
+          <span style={{ display: 'flex', gap: 10, flex: 'none' }}>
+            {missing > 0 && (
+              <button type="button" className="btn sm" onClick={() => attachInput.current?.click()}>
+                Прикрепить файлы
+              </button>
+            )}
+            <button type="button" className="link-muted" onClick={clearRestored}>
+              Скрыть
+            </button>
+          </span>
+        </div>
+      )}
+      <input
+        ref={attachInput}
+        type="file"
+        multiple
+        accept="audio/*,.flac,.m4a,.alac,.wav,.mp3,.aiff,.ogg,.opus"
+        hidden
+        onChange={(e) => {
+          attach(Array.from(e.target.files ?? []));
+          e.target.value = '';
+        }}
       />
       <div className="two-col">
         <div className="stack gap-16" style={{ minWidth: 0 }}>
@@ -356,7 +413,8 @@ export function Releases() {
               его треков. До 3000×3000, {COVER_EXTENSIONS.join(' · ')}.
             </div>
             <div className="hint">
-              Очередь и черновик живут только в этой вкладке: перезагрузка или закрытие страницы их сбросит.
+              Названия, порядок и статусы публикации сохраняются в браузере: после перезагрузки черновик вернётся, файлы
+              попросит выбрать заново.
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
               <div style={{ position: 'relative', flex: 'none' }}>
@@ -387,6 +445,11 @@ export function Releases() {
                   <button type="button" className="cover-remove" title="Убрать обложку" onClick={() => setDraftCover(undefined)}>
                     ×
                   </button>
+                )}
+                {draft.coverLost && !draft.cover && (
+                  <span className="hint c-warn" style={{ position: 'absolute', top: '100%', left: 0, width: 'max-content', maxWidth: 200 }}>
+                    «{draft.coverName}» не прикреплена
+                  </span>
                 )}
                 <input
                   ref={coverInput}
@@ -483,10 +546,11 @@ export function Releases() {
               {draft.tracks.map((t, i) => {
                 const label = phaseLabel(t);
                 const created = !!t.trackUuid;
+                const fileNote = t.file?.name || storedName(t.expectKey) || 'файл не прикреплён';
                 return (
                   <div key={t.id}>
                     <div
-                      className={`d-row${dropIdx === i && dragIdx !== i ? ' drop-target' : ''}`}
+                      className={`d-row${dropIdx === i && dragIdx !== i ? ' drop-target' : ''}${!t.file && trackNeedsFile(t) ? ' missing' : ''}`}
                       draggable={!locked}
                       onDragStart={() => setDragIdx(i)}
                       onDragOver={(e) => {
@@ -514,8 +578,8 @@ export function Releases() {
                           aria-label={`Название трека ${i + 1}`}
                           aria-invalid={!t.title.trim()}
                         />
-                        <span className="hint d-file" title={t.file.webkitRelativePath || t.file.name}>
-                          файл: {t.file.name}
+                        <span className={`hint d-file${!t.file && trackNeedsFile(t) ? ' c-warn' : ''}`} title={fileNote}>
+                          файл: {fileNote}
                         </span>
                       </div>
                       <span style={{ font: '400 11.5px/1 var(--mono)', color: 'var(--text-4)', textAlign: 'right' }}>{fmtDuration(t.meta.durationMs)}</span>
@@ -528,15 +592,38 @@ export function Releases() {
                       >
                         {t.explicit ? '18+' : '—'}
                       </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        title="Вернуть в очередь"
-                        disabled={created || draft.publishing}
-                        onClick={() => returnToQueue(t.id)}
-                      >
-                        ×
-                      </button>
+                      <span style={{ display: 'flex', gap: 4, flex: 'none' }}>
+                        {/* Порядок с клавиатуры: дублирует перетаскивание строки */}
+                        <button
+                          type="button"
+                          className="btn xs"
+                          title="Поднять трек"
+                          aria-label={`Поднять трек ${i + 1}`}
+                          disabled={locked || i === 0}
+                          onClick={() => moveTrack(i, i - 1)}
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          className="btn xs"
+                          title="Опустить трек"
+                          aria-label={`Опустить трек ${i + 1}`}
+                          disabled={locked || i === draft.tracks.length - 1}
+                          onClick={() => moveTrack(i, i + 1)}
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          title="Вернуть в очередь"
+                          disabled={created || draft.publishing}
+                          onClick={() => returnToQueue(t.id)}
+                        >
+                          ×
+                        </button>
+                      </span>
                     </div>
                     {label && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '4px 0 8px 38px' }}>
@@ -561,6 +648,11 @@ export function Releases() {
             <ErrorLine error={draft.error} />
             {untitled > 0 && !draft.publishing && (
               <div className="hint c-warn">Введи название для всех треков — без названия: {untitled}</div>
+            )}
+            {lostTracks > 0 && !draft.publishing && (
+              <div className="hint c-warn">
+                Файлов ждут повторного выбора: {lostTracks} — нажми «Прикрепить файлы» наверху; публикация без них не начнётся.
+              </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>

@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode, type RefObject } from 'react';
 import { errorLabel } from '../api/http';
 import { hueOf, initials } from '../lib/format';
 
@@ -128,18 +128,59 @@ export function Unsupported({ title, text, endpoints }: { title: string; text: R
   );
 }
 
-export function useConfirm() {
-  const [req, setReq] = useState<{ title: string; text: string; action: string; resolve: (ok: boolean) => void } | null>(null);
-  const confirm = (title: string, text: string, action = 'Подтвердить') =>
-    new Promise<boolean>((resolve) => setReq({ title, text, action, resolve }));
-  const close = (ok: boolean) => {
-    req?.resolve(ok);
-    setReq(null);
-  };
-  const node = req ? (
+// Общая механика модальных диалогов: Escape закрывает, Tab не выпускает фокус
+// наружу, при размонтировании фокус возвращается на открывшую кнопку.
+export function useDialogFocus(boxRef: RefObject<HTMLElement | null>, onClose: () => void) {
+  const cbRef = useRef(onClose);
+  cbRef.current = onClose;
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const box = boxRef.current;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        cbRef.current();
+        return;
+      }
+      if (e.key !== 'Tab' || !box) return;
+      const focusable = Array.from(box.querySelectorAll<HTMLButtonElement>('button')).filter((b) => !b.disabled);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const inside = box.contains(document.activeElement);
+      if (e.shiftKey && (document.activeElement === first || !inside)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && (document.activeElement === last || !inside)) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => {
+      document.removeEventListener('keydown', onKey, true);
+      opener?.focus?.();
+    };
+  }, [boxRef]);
+}
+
+interface ConfirmRequest {
+  title: string;
+  text: string;
+  action: string;
+  resolve: (ok: boolean) => void;
+}
+
+// Диалог подтверждения: закрытие по Escape, удержание и возврат фокуса.
+function ConfirmDialog({ req, close }: { req: ConfirmRequest; close: (ok: boolean) => void }) {
+  const titleId = useId();
+  const boxRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(boxRef, () => close(false));
+  return (
     <div className="modal-backdrop" onClick={() => close(false)}>
-      <div className="modal" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <h3>{req.title}</h3>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby={titleId} ref={boxRef} onClick={(e) => e.stopPropagation()}>
+        <h3 id={titleId}>{req.title}</h3>
         <p>{req.text}</p>
         <div className="modal-actions">
           <button type="button" className="btn" onClick={() => close(false)}>
@@ -151,6 +192,17 @@ export function useConfirm() {
         </div>
       </div>
     </div>
-  ) : null;
+  );
+}
+
+export function useConfirm() {
+  const [req, setReq] = useState<ConfirmRequest | null>(null);
+  const confirm = (title: string, text: string, action = 'Подтвердить') =>
+    new Promise<boolean>((resolve) => setReq({ title, text, action, resolve }));
+  const close = (ok: boolean) => {
+    req?.resolve(ok);
+    setReq(null);
+  };
+  const node = req ? <ConfirmDialog req={req} close={close} /> : null;
   return { confirm, node };
 }

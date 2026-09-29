@@ -120,3 +120,68 @@ export interface Page {
   limit?: number;
   offset?: number;
 }
+
+// ----- admin: операции владельца узла (см. privy_stream/api/v1/openapi.yaml) -----
+
+export type AdminServiceStatus = 'UP' | 'DOWN';
+
+export interface AdminServiceHealth {
+  name: string;
+  status: AdminServiceStatus;
+  ms: number;
+  note?: string;
+  /** true, если проверка дошла до БД/кэша; отсутствие поля — проверка не дошла. */
+  postgres?: boolean;
+  redis?: boolean;
+}
+
+export interface AdminHealth {
+  checked_at: string;
+  services: AdminServiceHealth[];
+}
+
+export interface AdminSession {
+  /** SHA-256 refresh-токена: сам токен user_service не покидает. */
+  session_id: string;
+  /** Unix-секунды: последняя ротация токена. */
+  created_at: number;
+  /** Unix-секунды: когда refresh-токен истечёт. */
+  expires_at: number;
+}
+
+export interface AdminUser {
+  user_uuid: string;
+  user_name: string;
+  role: string;
+  blocked: boolean;
+  birth_date: string;
+  created_at: string;
+}
+
+export interface AdminUsersPage {
+  users: AdminUser[];
+  total: number;
+}
+
+export interface AdminLogEntry {
+  /** Unix-миллисекунды. */
+  at: number;
+  level: 'INFO' | 'WARN' | 'ERROR';
+  service: string;
+  method?: string;
+  path?: string;
+  code?: string;
+  ms?: number;
+  message?: string;
+}
+
+export interface AdminLogsPage {
+  entries: AdminLogEntry[];
+}
+
+export type ModerationFilter = 'all' | 'explicit' | 'clean';
+
+export interface AdminModerationPage {
+  tracks: Track[];
+  total: number;
+}

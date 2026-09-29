@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 // Пути REST API Gateway (api/v1/openapi.yaml). В dev проксируем их на Gateway,
 // чтобы не упираться в CORS и не хардкодить адрес узла в бандле.
-const API_PREFIXES = ['/login', '/register', '/refresh', '/logout', '/catalog', '/stream'];
+const API_PREFIXES = ['/login', '/register', '/refresh', '/logout', '/catalog', '/stream', '/admin'];
 
 const BASE = '/admin/';
 
