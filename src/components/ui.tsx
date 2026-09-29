@@ -1,6 +1,34 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { errorLabel } from '../api/http';
 import { hueOf, initials } from '../lib/format';
+
+// Иконки темы — те же пути и обводка, что в клиенте (ui/index.tsx)
+function Ico({ size, d }: { size: number; d: string[] }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {d.map((p, i) => (
+        <path key={i} d={p} />
+      ))}
+    </svg>
+  );
+}
+export const SunIcon = ({ size = 16 }: { size?: number }) => (
+  <Ico
+    size={size}
+    d={[
+      'M12 8.2a3.8 3.8 0 1 1 0 7.6 3.8 3.8 0 0 1 0-7.6Z',
+      'M12 2.6v2.2',
+      'M12 19.2v2.2',
+      'm4.6 4.6 1.6 1.6',
+      'm17.8 17.8 1.6 1.6',
+      'M2.6 12h2.2',
+      'M19.2 12h2.2',
+      'm6.2 17.8-1.6 1.6',
+      'm19.4 4.6-1.6 1.6',
+    ]}
+  />
+);
+export const MoonIcon = ({ size = 16 }: { size?: number }) => <Ico size={size} d={['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z']} />;
 
 export function ScreenHeader({ code, title, sub, aside }: { code: string; title: string; sub: ReactNode; aside?: ReactNode }) {
   return (
@@ -37,23 +65,28 @@ export function ErrorLine({ error, onRetry }: { error: unknown; onRetry?: () => 
   );
 }
 
-// Обложек в API v1 нет — всегда плейсхолдер из названия.
+// Обложек в API v1 нет — всегда плейсхолдер из названия. Тона берутся из
+// переменных темы (--cover-* в styles.css): на светлой — бледная крашеная
+// плитка с тёмными чернилами, на тёмной — глубокий тон со светлым текстом.
 export function Cover({ seed, size = 44 }: { seed: string; size?: number }) {
   const hue = hueOf(seed);
   return (
     <div
-      style={{
-        width: size,
-        height: size,
-        flex: 'none',
-        background: `oklch(0.34 0.07 ${hue})`,
-        color: `oklch(0.82 0.06 ${hue})`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        font: `700 ${Math.round(size / 3.2)}px/1 var(--sans)`,
-        letterSpacing: '.02em',
-      }}
+      style={
+        {
+          '--hue': String(hue),
+          width: size,
+          height: size,
+          flex: 'none',
+          background: 'oklch(var(--cover-l) var(--cover-c) var(--hue))',
+          color: 'oklch(var(--cover-ink-l) var(--cover-ink-c) var(--hue))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          font: `700 ${Math.round(size / 3.2)}px/1 var(--sans)`,
+          letterSpacing: '.02em',
+        } as CSSProperties
+      }
       aria-hidden
     >
       {initials(seed)}

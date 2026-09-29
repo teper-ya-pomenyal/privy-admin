@@ -36,7 +36,7 @@ function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
     ? [fmtBytes(q.file.size), fmtDuration(m.durationMs), audioQuality(m) || m.codec, m.explicit ? '18+ из тегов' : ''].filter(Boolean).join(' · ')
     : `${fmtBytes(q.file.size)} · ${extOf(q.file.name).toUpperCase()}`;
   const width = q.stage === 'READY' || q.stage === 'ERROR' ? 100 : 50;
-  const color = q.stage === 'PROBE' ? 'var(--accent)' : q.stage === 'ERROR' ? 'var(--err)' : '#3A3A40';
+  const color = q.stage === 'PROBE' ? 'var(--accent)' : q.stage === 'ERROR' ? 'var(--err)' : 'var(--stroke)';
   return (
     <div className="q-row">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>

@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { ApiError } from './api/http';
 import { App } from './App';
+import { initTheme } from './state/theme';
 import { ToastProvider } from './state/toast';
 import './styles.css';
 
@@ -16,6 +17,9 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Атрибут темы на <html> до первой отрисовки — без вспышки чужой палитры
+initTheme();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

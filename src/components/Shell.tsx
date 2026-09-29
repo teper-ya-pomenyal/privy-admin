@@ -3,9 +3,11 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { API_BASE } from '../api/http';
 import { overallStatus } from '../api/health';
 import { useAuthActions, useSession } from '../state/auth';
+import { setTheme, useTheme } from '../state/theme';
 import { useCatalogIndex, useHealth, useRequestLog } from '../state/queries';
 import { useReleases } from '../state/releases';
 import { useToast } from '../state/toast';
+import { MoonIcon, SunIcon } from './ui';
 
 export interface NavItem {
   to: string;
@@ -13,6 +15,22 @@ export interface NavItem {
   mobile: string;
   count: string;
   hot: boolean;
+}
+
+/** Кнопка луна/солнце — как на экране входа клиента (Auth.tsx); float — в углу экрана. */
+export function ThemeToggle({ float = false }: { float?: boolean }) {
+  const theme = useTheme();
+  return (
+    <button
+      type="button"
+      className={`theme-toggle${float ? ' float' : ''}`}
+      aria-label={theme === 'light' ? 'Включить тёмную тему' : 'Включить светлую тему'}
+      title={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}
+      onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+    >
+      {theme === 'light' ? <MoonIcon size={15} /> : <SunIcon size={15} />}
+    </button>
+  );
 }
 
 export const nodeHost = () => {
@@ -89,6 +107,7 @@ export function Shell() {
         </div>
         <div className="header-right">
           <span className="user-login">{session?.userName}</span>
+          <ThemeToggle />
           <button type="button" className="btn sm" onClick={doLogout}>
             Выйти
           </button>
@@ -100,9 +119,12 @@ export function Shell() {
           <i />
           ADMIN
         </div>
-        <div className="m-header-node">
-          <div className={`dot ${dotClass}`} />
-          {host}
+        <div className="m-header-right">
+          <div className="m-header-node">
+            <div className={`dot ${dotClass}`} />
+            {host}
+          </div>
+          <ThemeToggle />
         </div>
       </div>
 

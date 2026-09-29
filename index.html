@@ -3,9 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#0B0B0C" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#f2efe8" />
     <title>privy/stream · admin</title>
+    <script>
+      // Тема до первой отрисовки (основной механизм — initTheme в main.tsx):
+      // светлая по умолчанию, тёмный графит по выбору из localStorage.
+      try {
+        var t = localStorage.getItem('privy.admin.theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
     <!-- Шрифты — локально через @fontsource (см. styles.css), без внешних запросов -->
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
   </head>

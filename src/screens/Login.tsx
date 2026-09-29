@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { ApiError } from '../api/http';
 import { ErrorLine } from '../components/ui';
-import { nodeHost } from '../components/Shell';
+import { ThemeToggle, nodeHost } from '../components/Shell';
 import { useAuthActions } from '../state/auth';
 
 function explain(e: unknown, mode: 'login' | 'register') {
@@ -42,6 +42,7 @@ export function Login() {
 
   return (
     <div className="app" style={{ alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <ThemeToggle float />
       <form className="card" style={{ width: '100%', maxWidth: 380 }} onSubmit={submit}>
         <div className="card-head">
           <div className="logo">

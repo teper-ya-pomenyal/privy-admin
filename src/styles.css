@@ -6,39 +6,116 @@
 @import '@fontsource/ibm-plex-mono/600.css';
 @import '@fontsource/ibm-plex-mono/700.css';
 
-/* Токены варианта A из new_design/design-review.md: графитовая база с зелёным
-   подтоном, тёплая шкала текста и один терракотовый акцент. Самая тёмная ступень
-   текста (--text-6) даёт ≥ 4.5:1 на --bg — слабые ступени подняты. Моно — только
+/* Темы — как в клиенте (styles/tokens.css): по умолчанию светлая «фонотека» из
+   концепта B (new_design/concept-b-light: бумага #F2EFE8, чернильный зелёный
+   #263C32, мягкий зелёный #5C655D, терракота #AB4E35), тёмный графит включается
+   через data-theme="dark" на <html> (ставит state/theme.ts). Значения совпадают
+   с клиентом 1:1, чтобы продукты читались как один мир. Самая слабая рабочая
+   ступень текста (--text-6) даёт ≥ 4.5:1 на --bg в обеих темах. Моно — только
    данные (адрес, пинг, время, коды, идентификаторы); интерфейс — Manrope. */
 :root {
-  --bg: #111313;
-  --bar: #141716;
-  --card: #191c1b;
-  --card-line: #2a2f2d;
-  --line: #232827;
-  --row-line: #1e2322;
-  --row-hover: #171a19;
-  --input-bg: #0e100f;
-  --stroke: #39403d;
-  --stroke-hover: #565e5a;
-  --text: #f1eee8;
-  --text-2: #d9d8d2;
-  --text-3: #b1b6b0;
-  --text-4: #9ba19b;
-  --text-5: #8c928c;
-  --text-6: #7f857f;
-  --accent: #d8452b;
-  --accent-hover: #f0563a;
-  --accent-text: #f0765c;
-  --ok: #7fae6b;
-  --warn: #e2bc4e;
-  --err: #d8452b;
-  --dot-off: #3a413e;
-  --on-accent: #16110f;
+  color-scheme: light;
+
+  /* Фоны: тёплая бумага; карточки чуть темнее (как активная полоса в макете),
+     плавающие панели (модал, шторка, подсказки) — самые светлые */
+  --bg: #f2efe8;
+  --bar: #f5f2eb;
+  --card: #ece8dd;
+  --bg-float: #f8f6f0;
+  --bg-selected: #e7e7de;
+  --line: #ddd8ca;
+  --card-line: #d8d2c2;
+  --row-line: #e4dfd3;
+  --row-hover: rgba(38, 60, 50, 0.05);
+  --input-bg: #f9f6f0;
+  --stroke: #cfc8b6;
+  --stroke-hover: #b5ae9b;
+  --skeleton: #e0dbce;
+  --backdrop: rgba(28, 47, 38, 0.45);
+
+  /* Текст: ступени чернильного зелёного */
+  --text: #263c32;
+  --text-2: #3c5044;
+  --text-3: #5c655d;
+  --text-4: #616b62;
+  --text-5: #64705f;
+  --text-6: #64705f;
+
+  /* Акцент — одна терракотовая нота */
+  --accent: #ab4e35;
+  --accent-hover: #94402a;
+  --accent-text: #96412a;
+  --accent-bg: rgba(171, 78, 53, 0.1);
+  --accent-line: rgba(171, 78, 53, 0.4);
+  --ok: #43703a;
+  --warn: #856309;
+  --err: #ab4e35;
+  --dot-off: #c6c0b0;
+  --on-accent: #fdf6ee;
+
+  --selection-bg: rgba(38, 60, 50, 0.9);
+  --selection-fg: #f5f2ea;
+  --scrollbar-thumb: #d8d2c4;
+  --shadow-pop: 0 16px 40px rgba(58, 47, 32, 0.18);
+
+  /* Тона генеративных обложек (Cover): бледная крашеная плитка, тёмные чернила */
+  --cover-l: 0.86;
+  --cover-c: 0.035;
+  --cover-ink-l: 0.38;
+  --cover-ink-c: 0.06;
+
   --radius: 10px;
   --radius-sm: 8px;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --sans: 'Manrope Variable', Manrope, Helvetica, sans-serif;
+}
+
+/* Тёмный графит (бывший вариант A): та же семантика токенов */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: #111313;
+  --bar: #151817;
+  --card: #191c1b;
+  --bg-float: #151817;
+  --bg-selected: #1e2221;
+  --line: #232826;
+  --card-line: #2a302d;
+  --row-line: #1c201f;
+  --row-hover: rgba(241, 238, 232, 0.04);
+  --input-bg: #0d0f0e;
+  --stroke: #343b38;
+  --stroke-hover: #4d5450;
+  --skeleton: #202624;
+  --backdrop: rgba(4, 6, 5, 0.65);
+
+  --text: #f1eee8;
+  --text-2: #d9d6cf;
+  --text-3: #b4b9b2;
+  --text-4: #9aa099;
+  --text-5: #858b84;
+  --text-6: #7e847d;
+
+  --accent: #d8452b;
+  --accent-hover: #f0563a;
+  --accent-text: #f0765c;
+  --accent-bg: rgba(216, 69, 43, 0.09);
+  --accent-line: rgba(216, 69, 43, 0.35);
+  --ok: #8bb877;
+  --warn: #e8c24b;
+  --err: #d8452b;
+  --dot-off: #454b47;
+  --on-accent: #fff8f2;
+
+  --selection-bg: rgba(216, 69, 43, 0.38);
+  --selection-fg: #fbf9f5;
+  --scrollbar-thumb: #2e3431;
+  --shadow-pop: 0 16px 40px rgba(0, 0, 0, 0.45);
+
+  --cover-l: 0.34;
+  --cover-c: 0.07;
+  --cover-ink-l: 0.82;
+  --cover-ink-c: 0.06;
 }
 
 html,
@@ -94,16 +171,32 @@ button:disabled {
 input:focus-visible {
   outline: none;
 }
+/* Выделение текста — в палитре темы (чернила на светлой, терракота на тёмной),
+   не системным синим */
+::selection {
+  background: var(--selection-bg);
+  color: var(--selection-fg);
+}
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2c3230;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--stroke-hover);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+/* Кросс-фейд всей страницы при смене темы (см. setTheme в state/theme.ts):
+   стандартная анимация слишком резкая — растягиваем и смягчаем, как в клиенте */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.45s;
+  animation-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
 }
 @keyframes pv-blink {
   0%,
@@ -363,6 +456,12 @@ input:focus-visible {
   font: 500 10px/1 var(--mono);
   color: var(--text-3);
 }
+.m-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
 .m-nav {
   flex: none;
   border-top: 1px solid var(--line);
@@ -391,14 +490,14 @@ input:focus-visible {
 .m-sheet-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(4, 6, 5, 0.6);
+  background: var(--backdrop);
   display: flex;
   align-items: flex-end;
   z-index: 5;
 }
 .m-sheet {
   width: 100%;
-  background: #151817;
+  background: var(--bg-float);
   border-top: 1px solid var(--stroke);
   border-radius: 12px 12px 0 0;
   padding: 10px 0 78px;
@@ -538,7 +637,7 @@ input:focus-visible {
 .chip.on {
   border-color: var(--accent);
   color: var(--accent-text);
-  background: rgba(216, 69, 43, 0.1);
+  background: var(--accent-bg);
 }
 .chip.filled {
   background: var(--text);
@@ -578,7 +677,7 @@ input:focus-visible {
 }
 .btn:disabled {
   color: var(--text-5);
-  border-color: #262b29;
+  border-color: var(--line);
 }
 .btn-accent {
   padding: 11px 17px;
@@ -612,7 +711,7 @@ input:focus-visible {
   white-space: nowrap;
 }
 .btn-danger:hover:not(:disabled) {
-  background: rgba(216, 69, 43, 0.12);
+  background: var(--accent-bg);
 }
 .btn-wide {
   width: 100%;
@@ -629,7 +728,7 @@ input:focus-visible {
 }
 .btn-wide:disabled {
   color: var(--text-5);
-  border-color: #262b29;
+  border-color: var(--line);
 }
 .icon-btn {
   font: 500 14px/1 var(--sans);
@@ -641,6 +740,31 @@ input:focus-visible {
 }
 .icon-btn:disabled {
   color: var(--stroke);
+}
+
+/* Переключатель темы: та же геометрия, что у клиента (.themeToggle) */
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--text-3);
+  flex: none;
+}
+.theme-toggle:hover {
+  color: var(--text);
+  border-color: var(--stroke-hover);
+}
+/* Вариант на экране входа — в углу экрана, как у клиента */
+.theme-toggle.float {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 5;
 }
 
 .input {
@@ -769,8 +893,8 @@ input:focus-visible {
 
 .error-line {
   padding: 11px 13px;
-  background: rgba(216, 69, 43, 0.1);
-  border: 1px solid rgba(216, 69, 43, 0.3);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-line);
   border-left: 2px solid var(--accent);
   border-radius: 6px;
   font: 500 12.5px/1.45 var(--sans);
@@ -783,7 +907,7 @@ input:focus-visible {
 }
 
 .skeleton {
-  background: #202624;
+  background: var(--skeleton);
   border-radius: 6px;
   animation: pv-shimmer 1.4s infinite;
 }
@@ -1102,10 +1226,10 @@ button.flag.on:hover:not(:disabled) {
   left: 0;
   right: 0;
   z-index: 8;
-  background: #151817;
+  background: var(--bg-float);
   border: 1px solid var(--stroke);
   border-radius: var(--radius-sm);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-pop);
   overflow: hidden;
 }
 .suggest-list {
@@ -1167,7 +1291,7 @@ button.flag.on:hover:not(:disabled) {
   background: var(--row-hover);
 }
 .album-row.selected {
-  background: #1d2221;
+  background: var(--bg-selected);
   box-shadow: inset 2px 0 0 var(--accent);
 }
 .album-title {
@@ -1252,7 +1376,7 @@ button.flag.on:hover:not(:disabled) {
   flex-wrap: wrap;
   gap: 2px 14px;
   padding: 7px 12px;
-  border-bottom: 1px solid #171b1a;
+  border-bottom: 1px solid var(--row-line);
 }
 .live-dot {
   width: 7px;
@@ -1270,7 +1394,7 @@ button.flag.on:hover:not(:disabled) {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(4, 6, 5, 0.65);
+  background: var(--backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1280,14 +1404,14 @@ button.flag.on:hover:not(:disabled) {
 .modal {
   width: 100%;
   max-width: 420px;
-  background: #151817;
+  background: var(--bg-float);
   border: 1px solid var(--stroke);
   border-radius: 12px;
   padding: 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--shadow-pop);
 }
 .modal h3 {
   margin: 0;
