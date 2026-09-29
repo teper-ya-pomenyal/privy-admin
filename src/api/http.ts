@@ -73,7 +73,8 @@ export function refreshTokens(): Promise<void> {
     if (!res.ok) {
       const msg = (await res.text()).trim();
       // Токен истёк, отозван или предъявлен повторно — сессия потеряна.
-      if (res.status === 401 || res.status === 400) setSession(null);
+      // 403: аккаунт заблокирован — обновление невозможно, держать сессию бессмысленно.
+      if (res.status === 401 || res.status === 400 || res.status === 403) setSession(null);
       throw new ApiError(res.status, msg || 'refresh отклонён');
     }
     const pair = (await res.json()) as RefreshResponse;

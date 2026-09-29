@@ -198,8 +198,12 @@ export function Sessions() {
           </div>
           {list.length > 1 && (
             <div className="row-foot">
-              <span>Текущая сессия останется активной</span>
-              <button type="button" className="link" onClick={revokeOthers}>
+              <span>
+                {currentId
+                  ? 'Текущая сессия останется активной'
+                  : 'Нет WebCrypto: текущую сессию вычислить нельзя (откройте админку по localhost или HTTPS)'}
+              </span>
+              <button type="button" className="link" disabled={!currentId} title={currentId ? undefined : 'Требуется WebCrypto (secure context)'} onClick={revokeOthers}>
                 Отозвать все другие сессии
               </button>
             </div>
@@ -281,15 +285,21 @@ export function Users() {
                 <span>дата рождения {fmtDate(u.birth_date)}</span>
               </div>
               <div style={{ flex: '0 0 auto', display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  type="button"
-                  className={u.blocked ? 'btn sm' : 'btn-danger'}
-                  style={{ padding: '8px 11px' }}
-                  disabled={block.isPending}
-                  onClick={() => toggleBlock(u)}
-                >
-                  {u.blocked ? 'Разблокировать' : 'Заблокировать'}
-                </button>
+                {u.role === 'owner' ? (
+                  <span className="status-text c-muted" title="Владельца узла нельзя заблокировать: без него узел потерял бы управление">
+                    БЛОКИРОВКА НЕВОЗМОЖНА
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    className={u.blocked ? 'btn sm' : 'btn-danger'}
+                    style={{ padding: '8px 11px' }}
+                    disabled={block.isPending}
+                    onClick={() => toggleBlock(u)}
+                  >
+                    {u.blocked ? 'Разблокировать' : 'Заблокировать'}
+                  </button>
+                )}
               </div>
             </div>
           ))}
