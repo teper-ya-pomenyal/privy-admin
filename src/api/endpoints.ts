@@ -38,6 +38,9 @@ export const catalog = {
   // Удаляет трек, его позицию в трек-листе и вхождения в плейлисты, плюс файл
   // из хранилища. Обложка остаётся: её файл принадлежит альбому.
   deleteTrack: (id: string) => request<void>('DELETE', `/catalog/tracks/${enc(id)}`),
+  // Удаляет альбом вместе со всеми его треками (позиции, плейлисты, файлы
+  // треков и обложка). Артист остаётся.
+  deleteAlbum: (id: string) => request<void>('DELETE', `/catalog/albums/${enc(id)}`),
   uploadTrackFile: (id: string, file: File, onProgress: (f: number) => void, signal?: AbortSignal) => {
     const form = new FormData();
     form.append('file', file, file.name);

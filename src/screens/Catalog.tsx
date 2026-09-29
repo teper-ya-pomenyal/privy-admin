@@ -102,6 +102,7 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
   const qc = useQueryClient();
   const { confirm, node: confirmNode } = useConfirm();
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deletingAlbum, setDeletingAlbum] = useState(false);
   const onError = useCallback((e: unknown) => toast(`Превью · ${errorLabel(e)}`), [toast]);
   const preview = usePreview(onError);
   const explicit = album.tracks.filter((t) => t.explicit).length;
@@ -126,6 +127,27 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
       toast(`Не удалось удалить · ${errorLabel(e)}`);
     } finally {
       setDeleting(null);
+    }
+  };
+
+  // Удаление релиза уносит с узла и альбом, и все его треки — с позициями,
+  // плейлистами и файлами. Артист остаётся в каталоге.
+  const removeAlbum = async () => {
+    const ok = await confirm(
+      `Удалить релиз «${album.album_name}»?`,
+      `С узла пропадут альбом и все его треки (${album.tracks.length}) — вместе с позициями в трек-листе, вхождениями в плейлисты и файлами. Артист останется. Отменить нельзя.`,
+      'Удалить релиз',
+    );
+    if (!ok) return;
+    setDeletingAlbum(true);
+    try {
+      await catalogApi.deleteAlbum(album.album_uuid);
+      toast(`Релиз удалён · ${album.album_name}`);
+      qc.invalidateQueries({ queryKey: CATALOG_KEY });
+      onClose();
+    } catch (e) {
+      toast(`Не удалось удалить релиз · ${errorLabel(e)}`);
+      setDeletingAlbum(false);
     }
   };
 
@@ -220,7 +242,16 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
         <div className="note">
           В API v1 метаданные и метка 18+ задаются только при создании трека — эндпоинтов изменения (UpdateAlbum, PATCH трека) нет.
         </div>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+          <button
+            type="button"
+            className="btn"
+            disabled={deletingAlbum || deleting !== null}
+            title="Удалить релиз со всеми треками"
+            onClick={() => void removeAlbum()}
+          >
+            {deletingAlbum ? 'Удаляем…' : 'Удалить релиз'}
+          </button>
           <button type="button" className="btn-accent" onClick={() => navigate(`/releases?album=${album.album_uuid}`)}>
             + Добавить треки
           </button>
