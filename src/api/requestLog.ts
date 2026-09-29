@@ -17,6 +17,8 @@ export interface RequestLogEntry {
 }
 
 const CAPACITY = 200;
+/** Ёмкость кольцевого буфера — экран «Запросы» пишет её в подписи «Показано N из M». */
+export const LOG_CAPACITY = CAPACITY;
 let seq = 0;
 let entries: RequestLogEntry[] = [];
 const listeners = new Set<() => void>();

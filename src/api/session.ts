@@ -7,6 +7,8 @@ export interface Session {
   birthDate: string;
   accessToken: string;
   refreshToken: string;
+  /** Роль из claims access-токена; 'owner' — единственный, кому открыта админка. */
+  role?: string;
 }
 
 export interface AccessClaims {
@@ -14,6 +16,7 @@ export interface AccessClaims {
   exp?: number;
   iat?: number;
   birth_date?: string;
+  role?: string;
   [k: string]: unknown;
 }
 
@@ -44,7 +47,9 @@ export function setSession(next: Session | null) {
 
 export function updateTokens(accessToken: string, refreshToken: string) {
   if (!current) return;
-  setSession({ ...current, accessToken, refreshToken });
+  // Роль читаем из нового access-токена: владелец мог лишиться роли на сервере.
+  const role = decodeClaims(accessToken)?.role ?? current.role;
+  setSession({ ...current, accessToken, refreshToken, role });
 }
 
 export function subscribeSession(cb: () => void) {

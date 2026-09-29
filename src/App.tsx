@@ -10,6 +10,7 @@ import { Moderation } from './screens/Moderation';
 import { Overview } from './screens/Overview';
 import { Releases } from './screens/Releases';
 import { useSession } from './state/auth';
+import { NoAccess } from './screens/NoAccess';
 
 export function App() {
   const session = useSession();
@@ -21,6 +22,9 @@ export function App() {
   }, [userUuid, qc]);
 
   if (!session) return <Login />;
+  // Сервер всё равно проверяет роль (RequireOwner на записи каталога) —
+  // здесь только честный экран вместо видимости рабочего инструмента.
+  if (session.role !== 'owner') return <NoAccess />;
 
   return (
     <Routes>
