@@ -1,9 +1,10 @@
 import { useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 
-// Тема — как в клиенте (store/settings.ts): светлая «фонотека» по умолчанию,
-// тёмный графит под data-theme на <html> (см. :root[data-theme='dark'] в
-// styles.css). Выбор живёт в localStorage рядом с privy.admin.session.
+// Тема — как в клиенте (store/settings.ts), но по умолчанию тёмный графит:
+// он живёт под data-theme на <html> (см. :root[data-theme='dark'] в styles.css),
+// атрибут ставится до первой отрисовки (initTheme в main.tsx + скрипт в
+// index.html). Выбор живёт в localStorage рядом с privy.admin.session.
 
 export type Theme = 'light' | 'dark';
 
@@ -19,7 +20,7 @@ function load(): Theme {
   } catch {
     // приватный режим — работаем с дефолтом, ничего не сохраняем
   }
-  return 'light';
+  return 'dark';
 }
 
 function apply(theme: Theme) {
