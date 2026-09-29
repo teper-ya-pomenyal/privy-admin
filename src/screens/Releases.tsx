@@ -1,6 +1,6 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState, type DragEvent } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { releaseType } from '../api/catalogIndex';
 import { catalog as catalogApi } from '../api/endpoints';
 import { errorLabel } from '../api/http';
@@ -98,6 +98,7 @@ export function Releases() {
   const toast = useToast();
   const qc = useQueryClient();
   const catalog = useCatalogIndex();
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { confirm, node: confirmNode } = useConfirm();
   const filesInput = useRef<HTMLInputElement>(null);
@@ -109,6 +110,19 @@ export function Releases() {
 
   const locked = isDraftLocked(draft);
   const existing = draft.target.kind === 'existing' ? draft.target : null;
+
+  // Файлы очереди и черновика существуют только в памяти вкладки: перезагрузка
+  // или закрытие теряют их безвозвратно — просим подтверждение у браузера
+  const unsaved = queue.length > 0 || draft.tracks.length > 0 || draft.publishing;
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsaved]);
 
   // Подсказки артиста: имя ищется в каталоге узла с debounce, выбор подставляет
   // его uuid в публикацию; без выбора имя уйдёт в AddArtist как новый артист.
@@ -201,8 +215,11 @@ export function Releases() {
   const publish = async () => {
     try {
       const r = await publishDraft();
-      toast(`«${r.title}» опубликован · ${shortId(r.albumUuid)}`);
       qc.invalidateQueries({ queryKey: CATALOG_KEY });
+      toast(`«${r.title}» опубликован · ${shortId(r.albumUuid)}`, {
+        label: 'Открыть в каталоге',
+        onClick: () => navigate(`/catalog/${r.albumUuid}`),
+      });
     } catch (e) {
       toast(`Публикация остановлена · ${errorLabel(e)}`);
     }
@@ -328,6 +345,9 @@ export function Releases() {
           <div className="card-body">
             <div className="hint">
               Обложка — только локальный предпросмотр (до 3000×3000): API v1 обложки не принимает, на узел она не отправляется.
+            </div>
+            <div className="hint">
+              Очередь и черновик живут только в этой вкладке: перезагрузка или закрытие страницы их сбросит.
             </div>
             <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
               <div style={{ position: 'relative', flex: 'none' }}>

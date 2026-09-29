@@ -23,7 +23,8 @@ function ServiceCard({ s, onClick }: { s: ServiceProbe; onClick: () => void }) {
         <div style={{ width: `${Math.round(s.uptime * 100)}%`, background: STATUS_COLOR[s.status] }} />
       </div>
       <div className="hint" style={{ lineHeight: 1.3 }}>
-        {s.note} · аптайм {Math.round(s.uptime * 100)}%
+        {/* Это не серверный аптайм, а доля успешных проб с открытия вкладки — называем как есть */}
+        {s.note} · успешность проб {Math.round(s.uptime * 100)}%
       </div>
     </button>
   );

@@ -53,8 +53,10 @@ function useNav(): NavItem[] {
     { to: '/', label: 'Обзор', mobile: 'Обзор', count: '', hot: false },
     { to: '/releases', label: 'Релизы', mobile: 'Релизы', count: queueCount ? String(queueCount) : '', hot: busy },
     { to: '/catalog', label: 'Каталог', mobile: 'Каталог', count: idx ? String(idx.albums.length) : '', hot: false },
-    { to: '/users', label: 'Пользователи', mobile: 'Люди', count: '—', hot: false },
-    { to: '/sessions', label: 'Сессии', mobile: 'Сессии', count: '1', hot: false },
+    // У пользователей и сессий нет счётчиков: списка в API v1 нет, показывать
+    // фиктивные «—» и «1» нечестно (см. APP.md)
+    { to: '/users', label: 'Пользователи', mobile: 'Люди', count: '', hot: false },
+    { to: '/sessions', label: 'Сессии', mobile: 'Сессии', count: '', hot: false },
     { to: '/moderation', label: 'Метки 18+', mobile: 'Метки', count: idx ? String(idx.explicitCount) : '', hot: false },
     { to: '/logs', label: 'Логи', mobile: 'Логи', count: errors ? `${errors} ERR` : '', hot: errors > 0 },
   ];

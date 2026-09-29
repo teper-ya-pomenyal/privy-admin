@@ -942,6 +942,20 @@ input:focus-visible {
   border-radius: var(--radius-sm);
   font: 600 12.5px/1.4 var(--sans);
   max-width: 340px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.toast-action {
+  font: inherit;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  opacity: 0.85;
+}
+.toast-action:hover {
+  opacity: 1;
 }
 
 .unsupported {
