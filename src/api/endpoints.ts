@@ -35,6 +35,9 @@ export const catalog = {
   getTrack: (id: string) => request<TrackPath>('GET', `/catalog/tracks/${enc(id)}`),
   trackExists: (id: string) => request<{ exists: boolean }>('GET', `/catalog/tracks/${enc(id)}/exists`),
   addTrack: (body: AddTrackRequest) => request<TrackDetails>('POST', '/catalog/tracks', { body }),
+  // Удаляет трек, его позицию в трек-листе и вхождения в плейлисты, плюс файл
+  // из хранилища. Обложка остаётся: её файл принадлежит альбому.
+  deleteTrack: (id: string) => request<void>('DELETE', `/catalog/tracks/${enc(id)}`),
   uploadTrackFile: (id: string, file: File, onProgress: (f: number) => void, signal?: AbortSignal) => {
     const form = new FormData();
     form.append('file', file, file.name);

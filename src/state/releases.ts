@@ -277,12 +277,36 @@ export async function publishDraft(): Promise<PublishResult> {
   try {
     const target = d0.target;
     let artistUuid = target.kind === 'existing' ? target.artistUuid : d0.artistUuid;
+    let albumUuid = target.kind === 'existing' ? target.albumUuid : d0.albumUuid;
+
+    // Черновик мог остаться от прерванной публикации, а записи на узле тем
+    // временем удалены (вручную или через каталог): без проверки «Продолжить»
+    // падает в середине — например, 404 на обложке удалённого альбома, при
+    // этом треки уже залиты и остаются висеть без позиций.
+    if (albumUuid) {
+      try {
+        await catalog.getAlbum(albumUuid);
+      } catch (e) {
+        if (!(e instanceof ApiError) || e.status !== 404) throw e;
+        if (target.kind === 'existing') throw new Error('релиза больше нет на узле — сбрось черновик и начни заново');
+        // Новый релиз: альбом прерванной публикации удалён — публикуем заново,
+        // артист найдётся по имени, треки пересоздадутся на своих местах.
+        setDraft((d) => ({
+          ...d,
+          albumUuid: undefined,
+          artistUuid: undefined,
+          tracks: d.tracks.map((t) => ({ ...t, trackUuid: undefined, uploaded: undefined, progress: 0, phase: 'idle' as const })),
+        }));
+        artistUuid = undefined;
+        albumUuid = undefined;
+      }
+    }
+
     if (!artistUuid) {
       artistUuid = await resolveArtist(d0.artist);
       setDraft((d) => ({ ...d, artistUuid }));
     }
 
-    let albumUuid = target.kind === 'existing' ? target.albumUuid : d0.albumUuid;
     if (!albumUuid) {
       albumUuid = (await catalog.addAlbum({ artist_uuid: artistUuid, album_name: d0.title.trim() })).album_uuid;
       setDraft((d) => ({ ...d, albumUuid }));
@@ -296,6 +320,15 @@ export async function publishDraft(): Promise<PublishResult> {
       if (t.phase === 'done') continue;
       try {
         let trackUuid = t.trackUuid;
+        // Трек из прерванной публикации могли удалить на узле — пересоздаём,
+        // иначе загрузка файла упадёт с 404 посреди «Продолжить».
+        if (trackUuid) {
+          const exists = await catalog.trackExists(trackUuid).then((r) => r.exists, () => false);
+          if (!exists) {
+            patchTrack(t.id, { trackUuid: undefined, uploaded: undefined, progress: 0, phase: 'idle' });
+            trackUuid = undefined;
+          }
+        }
         if (!trackUuid) {
           patchTrack(t.id, { phase: 'index', error: undefined });
           const created = await catalog.addTrack({

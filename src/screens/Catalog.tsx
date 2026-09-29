@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { releaseType, type AlbumEntry, type ReleaseType } from '../api/catalogIndex';
 import { errorLabel } from '../api/http';
 import { catalog as catalogApi } from '../api/endpoints';
-import { Chip, Cover, ErrorLine, ScreenHeader, SkeletonRows } from '../components/ui';
+import { Chip, Cover, ErrorLine, ScreenHeader, SkeletonRows, useConfirm } from '../components/ui';
 import { fmtDate, fmtDuration, pad2, shortId } from '../lib/format';
 import { imageSize } from '../lib/metadata';
 import { usePreview } from '../lib/usePreview';
@@ -99,10 +99,35 @@ function AlbumCover({ albumUuid }: { albumUuid: string }) {
 function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => void }) {
   const navigate = useNavigate();
   const toast = useToast();
+  const qc = useQueryClient();
+  const { confirm, node: confirmNode } = useConfirm();
+  const [deleting, setDeleting] = useState<string | null>(null);
   const onError = useCallback((e: unknown) => toast(`Превью · ${errorLabel(e)}`), [toast]);
   const preview = usePreview(onError);
   const explicit = album.tracks.filter((t) => t.explicit).length;
   const total = album.tracks.reduce((s, t) => s + t.duration_ms, 0);
+
+  // Удаление трека — для «хвостов» прерванных публикаций (запись без файла
+  // не воспроизводится) и для честной чистки каталога. Трек снимается
+  // с позиций в трек-листе и из плейлистов, файл удаляется с узла.
+  const removeTrack = async (t: AlbumEntry['tracks'][number]) => {
+    const ok = await confirm(
+      `Удалить «${t.track_name}»?`,
+      'Трек пропадёт из каталога, трек-листа и плейлистов, файл будет удалён с узла. Отменить нельзя.',
+      'Удалить',
+    );
+    if (!ok) return;
+    setDeleting(t.track_uuid);
+    try {
+      await catalogApi.deleteTrack(t.track_uuid);
+      toast(`Трек удалён · ${t.track_name}`);
+      qc.invalidateQueries({ queryKey: CATALOG_KEY });
+    } catch (e) {
+      toast(`Не удалось удалить · ${errorLabel(e)}`);
+    } finally {
+      setDeleting(null);
+    }
+  };
 
   return (
     <div className="card">
@@ -176,6 +201,16 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
                 </span>
                 <span style={{ font: '400 11.5px/1 var(--mono)', color: 'var(--text-4)', textAlign: 'right' }}>{fmtDuration(t.duration_ms)}</span>
                 <span className={`flag${t.explicit ? ' on' : ''}`}>{t.explicit ? '18+' : '—'}</span>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  disabled={deleting !== null}
+                  title="Удалить трек с узла"
+                  aria-label={`Удалить ${t.track_name}`}
+                  onClick={() => void removeTrack(t)}
+                >
+                  {deleting === t.track_uuid ? '…' : '×'}
+                </button>
               </div>
             );
           })}
@@ -191,6 +226,7 @@ function AlbumDetail({ album, onClose }: { album: AlbumEntry; onClose: () => voi
           </button>
         </div>
       </div>
+      {confirmNode}
     </div>
   );
 }
