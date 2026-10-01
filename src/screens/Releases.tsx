@@ -5,7 +5,7 @@ import { releaseType } from '../api/catalogIndex';
 import { catalog as catalogApi } from '../api/endpoints';
 import { errorLabel } from '../api/http';
 import type { Artist } from '../api/types';
-import { Chip, ErrorLine, ScreenHeader, useConfirm } from '../components/ui';
+import { Chip, Cover, ErrorLine, ScreenHeader, TrashIcon, UploadIcon, useConfirm } from '../components/ui';
 import { fmtBytes, fmtDuration, pad2, shortId } from '../lib/format';
 import { audioQuality, extOf, filesFromDataTransfer, imageSize, isImage } from '../lib/metadata';
 import { CATALOG_KEY, useCatalogIndex } from '../state/queries';
@@ -13,6 +13,7 @@ import {
   addFiles,
   addToDraft,
   attachFiles,
+  clearQueue,
   clearRestored,
   flushDraft,
   isDraftLocked,
@@ -42,42 +43,61 @@ const storedName = (key: string | undefined) => (key ? key.split(':').slice(0, -
 function QueueRow({ q, canAdd }: { q: QueueItem; canAdd: boolean }) {
   const m = q.meta;
   const missing = !q.file;
-  const meta = missing
-    ? [fmtDuration(m?.durationMs), 'файл не прикреплён'].filter(Boolean).join(' · ')
-    : m
-      ? [fmtBytes(q.file!.size), fmtDuration(m.durationMs), audioQuality(m) || m.codec, m.explicit ? '18+ из тегов' : ''].filter(Boolean).join(' · ')
-      : `${fmtBytes(q.file!.size)} · ${extOf(q.file!.name).toUpperCase()}`;
+  const name = q.file?.name || storedName(q.expectKey) || 'файл';
+  // Название из тегов — главное в строке; пока тегов нет, показываем имя файла
+  const titled = m?.titleFromTags ? m.title : '';
+  const main = titled || name;
+  const meta = [
+    q.file ? fmtBytes(q.file.size) : null,
+    m?.durationMs ? fmtDuration(m.durationMs) : null,
+    m ? audioQuality(m) || m.codec : extOf(name).toUpperCase(),
+    m?.explicit ? '18+ из тегов' : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  const stageLabel =
+    q.stage === 'PROBE' ? 'Обработка…' : q.stage === 'READY' ? 'Готово' : q.stage === 'MISSING' ? 'Нет файла' : 'Ошибка';
+  const stageCls = q.stage === 'READY' ? ' c-ok' : q.stage === 'ERROR' ? ' c-err' : q.stage === 'MISSING' ? ' c-warn' : '';
   const width = q.stage === 'READY' || q.stage === 'ERROR' ? 100 : 50;
   const color = q.stage === 'PROBE' ? 'var(--accent)' : q.stage === 'ERROR' ? 'var(--err)' : 'var(--stroke)';
   return (
     <div className={`q-row${missing ? ' missing' : ''}`}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
-          <span className="q-name" title={q.file?.webkitRelativePath || q.file?.name || storedName(q.expectKey)}>
-            {q.file?.name || storedName(q.expectKey) || 'файл'}
-          </span>
-          <span style={{ font: '400 11px/1.3 var(--mono)', color: 'var(--text-4)' }}>{meta}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ borderRadius: 6, overflow: 'hidden', flex: 'none' }} aria-hidden>
+          <Cover seed={m?.title || name} size={36} />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 'none' }}>
-          {q.stage === 'PROBE' && <span className="stage">PROBE · TAGS</span>}
-          {q.stage === 'READY' && <span className="stage c-ok">ГОТОВ</span>}
-          {q.stage === 'MISSING' && <span className="stage c-warn">НЕТ ФАЙЛА</span>}
-          {q.stage === 'ERROR' && (
-            <>
-              <span className="stage c-err">ОШИБКА</span>
-              <button type="button" className="btn xs" onClick={() => retryProbe(q.id)}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, flex: 1 }}>
+          <span className="q-title" title={main}>
+            {main}
+          </span>
+          {titled && m?.artist?.trim() && (
+            <span className="hint" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {m.artist}
+            </span>
+          )}
+          <span className="q-name" title={name}>
+            {name}
+            {meta ? ` · ${meta}` : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 7, flex: 'none' }}>
+          {m?.durationMs ? <span className={`stage${stageCls}`}>{fmtDuration(m.durationMs)}</span> : null}
+          <span className={`stage${stageCls}`}>{stageLabel}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {q.stage === 'ERROR' && (
+              <button type="button" className="btn xs" title="Разобрать заново" onClick={() => retryProbe(q.id)}>
                 ↻
               </button>
-            </>
-          )}
-          {q.stage === 'READY' && canAdd && (
-            <button type="button" className="btn xs" title="Добавить в черновик" onClick={() => addToDraft([q.id])}>
-              +
+            )}
+            {q.stage === 'READY' && canAdd && (
+              <button type="button" className="btn xs" title="Добавить в черновик" onClick={() => addToDraft([q.id])}>
+                +
+              </button>
+            )}
+            <button type="button" className="icon-btn" title="Убрать из очереди" onClick={() => removeFromQueue(q.id)}>
+              ×
             </button>
-          )}
-          <button type="button" className="icon-btn" title="Убрать из очереди" onClick={() => removeFromQueue(q.id)}>
-            ×
-          </button>
+          </div>
         </div>
       </div>
       <div className="bar">
@@ -280,7 +300,7 @@ export function Releases() {
       : 'Все разобранные файлы из очереди можно добавить в релиз одним действием. Порядок — по номеру трека из тегов, дальше перетаскиванием.';
 
   const addAllLabel = ready
-    ? `+ Добавить все готовые в релиз · ${ready}`
+    ? `+ Добавить треки из очереди · ${ready}`
     : probing
       ? `Ждём разбор тегов · ${probing}`
       : 'Нет готовых файлов';
@@ -295,8 +315,8 @@ export function Releases() {
     <>
       <ScreenHeader
         code="02 · Загрузка"
-        title="Релизы"
-        sub="Файлы разбираются в браузере, затем собираются в релиз и заливаются на узел. Сингл — это альбом с одним треком. Порядок треков меняется перетаскиванием или кнопками ↑ ↓."
+        title="Добавить релиз"
+        sub="Загрузите аудиофайлы и обложку — теги распознаются в браузере, и из готовых файлов соберётся черновик релиза. Сингл — тот же альбом с одним треком; порядок треков меняется перетаскиванием или кнопками ↑ ↓."
       />
       {state.restored && (
         <div className="restore-note" role="status">
@@ -342,10 +362,13 @@ export function Releases() {
             onDragLeave={() => setOver(false)}
             onDrop={onDrop}
           >
-            <div className="dropzone-title">Перетащи файлы или папку релиза</div>
-            <div className="note">FLAC · ALAC · WAV · MP3 · изображение из зоны станет обложкой релиза</div>
+            <div aria-hidden style={{ color: 'var(--accent)', display: 'flex' }}>
+              <UploadIcon size={26} />
+            </div>
+            <div className="dropzone-title">Перетащи файлы или папку сюда</div>
+            <div className="note">FLAC · ALAC · WAV · MP3 · картинка из зоны станет обложкой релиза</div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <span className="btn">Выбрать файлы</span>
+              <span className="btn-accent">Выбрать файлы</span>
               <button
                 type="button"
                 className="btn"
@@ -354,7 +377,7 @@ export function Releases() {
                   dirInput.current?.click();
                 }}
               >
-                Папку
+                Выбрать папку
               </button>
             </div>
             <input
@@ -382,16 +405,32 @@ export function Releases() {
           </div>
 
           <div className="section-head" style={{ alignItems: 'center' }}>
-            <div className="label">Очередь · {queue.length}</div>
-            <div className="hint" style={{ letterSpacing: '.06em' }}>
-              PROBE → TAGS → INDEX → UPLOAD
+            <div className="label" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              Файлы в очереди
+              <span className="tag muted">{queue.length}</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <span className="hint" style={{ letterSpacing: '.06em' }}>
+                PROBE → TAGS → INDEX → UPLOAD
+              </span>
+              {queue.length > 0 && (
+                <button
+                  type="button"
+                  className="link-muted"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                  onClick={clearQueue}
+                >
+                  <TrashIcon size={13} />
+                  Очистить все
+                </button>
+              )}
             </div>
           </div>
           <div className="list">
             {queue.map((q) => (
               <QueueRow key={q.id} q={q} canAdd={!locked} />
             ))}
-            {!queue.length && <div className="empty">Очередь пуста — все файлы разобраны по релизам.</div>}
+            {!queue.length && <div className="empty">Очередь пуста — перетащи аудиофайлы в зону выше.</div>}
           </div>
         </div>
 
@@ -402,68 +441,92 @@ export function Releases() {
               {existing && !locked && (
                 <Chip onClick={() => setDraftTarget({ kind: 'new' })}>Новый релиз ×</Chip>
               )}
-              <span className="tag muted" title="Тип выводится из числа треков">
-                {type}
-              </span>
+              {ready > 0 && (
+                <span className="tag ok" title="Разобранные файлы очереди можно добавить в черновик">
+                  ✓ Есть готовые файлы
+                </span>
+              )}
             </div>
           </div>
           <div className="card-body">
-            <div className="hint">
-              Обложка уедет на узел вместе с релизом — POST /catalog/albums/{'{id}'}/cover — и станет обложкой альбома и всех
-              его треков. До 3000×3000, {COVER_EXTENSIONS.join(' · ')}.
-            </div>
-            <div className="hint">
-              Названия, порядок и статусы публикации сохраняются в браузере: после перезагрузки черновик вернётся, файлы
-              попросит выбрать заново.
-            </div>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <div style={{ position: 'relative', flex: 'none' }}>
-                <button
-                  type="button"
-                  className={`draft-cover${draft.coverUrl ? ' has-image' : ''}`}
-                  onClick={() => coverInput.current?.click()}
-                  disabled={draft.publishing}
-                  title={draft.cover ? draft.cover.name : 'Выбрать обложку релиза'}
-                  aria-label="Обложка релиза"
-                >
-                  {draft.coverUrl ? (
-                    <img src={draft.coverUrl} alt="" />
-                  ) : (
-                    <>
-                      нет
-                      <br />
-                      обложки
-                    </>
-                  )}
-                </button>
-                {draft.publishing && draft.cover && !draft.coverUploaded && (
-                  <div className="bar" style={{ position: 'absolute', left: 4, right: 4, bottom: 4 }}>
-                    <div style={{ width: `${Math.max(4, Math.round((draft.coverProgress ?? 0) * 100))}%`, background: 'var(--accent)' }} />
-                  </div>
-                )}
-                {draft.coverUrl && (
-                  <button type="button" className="cover-remove" title="Убрать обложку" onClick={() => setDraftCover(undefined)}>
-                    ×
+            <div className="field">
+              <span className="label">Обложка релиза</span>
+              <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{ position: 'relative', flex: 'none' }}>
+                  <button
+                    type="button"
+                    className={`draft-cover${draft.coverUrl ? ' has-image' : ''}`}
+                    onClick={() => coverInput.current?.click()}
+                    disabled={draft.publishing}
+                    title={draft.cover ? draft.cover.name : 'Выбрать обложку релиза'}
+                    aria-label="Обложка релиза"
+                  >
+                    {draft.coverUrl ? (
+                      <img src={draft.coverUrl} alt="" />
+                    ) : (
+                      <>
+                        нет
+                        <br />
+                        обложки
+                      </>
+                    )}
                   </button>
-                )}
-                {draft.coverLost && !draft.cover && (
-                  <span className="hint c-warn" style={{ position: 'absolute', top: '100%', left: 0, width: 'max-content', maxWidth: 200 }}>
-                    «{draft.coverName}» не прикреплена
+                  {draft.publishing && draft.cover && !draft.coverUploaded && (
+                    <div className="bar" style={{ position: 'absolute', left: 4, right: 4, bottom: 4 }}>
+                      <div style={{ width: `${Math.max(4, Math.round((draft.coverProgress ?? 0) * 100))}%`, background: 'var(--accent)' }} />
+                    </div>
+                  )}
+                  <input
+                    ref={coverInput}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={(e) => {
+                      void pickCover(e.target.files?.[0]);
+                      e.target.value = '';
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start' }}>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <button
+                      type="button"
+                      className="btn sm"
+                      disabled={draft.publishing}
+                      onClick={() => coverInput.current?.click()}
+                    >
+                      {draft.coverUrl ? 'Заменить обложку' : 'Выбрать обложку'}
+                    </button>
+                    {draft.coverUrl && (
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        title="Убрать обложку"
+                        disabled={draft.publishing}
+                        onClick={() => setDraftCover(undefined)}
+                      >
+                        <TrashIcon size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <span className="hint">
+                    Станет обложкой альбома и всех его треков — POST /catalog/albums/{'{id}'}/cover.{' '}
+                    {COVER_EXTENSIONS.join(' · ').toUpperCase()} · до {COVER_MAX_SIDE}×{COVER_MAX_SIDE}.
                   </span>
-                )}
-                <input
-                  ref={coverInput}
-                  type="file"
-                  accept="image/*"
-                  hidden
-                  onChange={(e) => {
-                    void pickCover(e.target.files?.[0]);
-                    e.target.value = '';
-                  }}
-                />
+                  {draft.coverLost && !draft.cover && (
+                    <span className="hint c-warn">«{draft.coverName}» не прикреплена — выбери заново</span>
+                  )}
+                </div>
               </div>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
+            </div>
+
+            <div className="draft-grid">
+              <div className="field">
+                <label className="label" htmlFor="draft-title">
+                  Название релиза
+                </label>
                 <input
+                  id="draft-title"
                   className="input title"
                   placeholder="Название релиза"
                   value={draft.title}
@@ -471,78 +534,122 @@ export function Releases() {
                   onChange={(e) => updateDraft({ title: e.target.value })}
                   aria-label="Название релиза"
                 />
-                <div style={{ position: 'relative' }}>
-                  <input
-                    className="input"
-                    placeholder="Исполнитель"
-                    value={draft.artist}
-                    disabled={!!existing || locked}
-                    autoComplete="off"
-                    onChange={(e) => {
-                      updateDraft({ artist: e.target.value, artistUuid: undefined, artistName: undefined });
-                      setSuggestOpen(true);
-                    }}
-                    onFocus={() => setSuggestOpen(true)}
-                    onBlur={(e) => {
-                      if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node | null)) setSuggestOpen(false);
-                    }}
-                    onKeyDown={(e) => e.key === 'Escape' && setSuggestOpen(false)}
-                    aria-label="Исполнитель"
-                  />
-                  {canSuggest && (
-                    <div className="suggest">
-                      <div className="suggest-list">
-                        {suggest.isFetching && !suggest.data?.length && <div className="suggest-note">Поиск по каталогу…</div>}
-                        {suggest.data?.map((a) => (
-                          <button
-                            key={a.artist_uuid}
-                            type="button"
-                            className={`suggest-item${a.artist_uuid === draft.artistUuid ? ' selected' : ''}`}
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => pickArtist(a)}
-                          >
-                            {a.artist_name}
-                            <span className="suggest-id">{shortId(a.artist_uuid)}</span>
-                          </button>
-                        ))}
-                        {suggest.data && !suggest.data.length && (
-                          <div className="suggest-note">Совпадений нет — «{draft.artist.trim()}» зальётся как новый артист.</div>
-                        )}
-                        {suggest.error && <div className="suggest-note c-err">Поиск не ответил: {errorLabel(suggest.error)}</div>}
-                      </div>
-                      <button
-                        type="button"
-                        className="suggest-item suggest-create"
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => setSuggestOpen(false)}
-                      >
-                        + Создать нового: «{draft.artist.trim()}»
-                      </button>
+              </div>
+              <div className="field">
+                <label className="label" htmlFor="draft-type">
+                  Тип
+                </label>
+                <select
+                  id="draft-type"
+                  className="input"
+                  disabled
+                  value={type}
+                  title="Тип выводится из числа треков — в API v1 не хранится"
+                >
+                  <option value="Сингл">Сингл</option>
+                  <option value="EP">EP</option>
+                  <option value="Альбом">Альбом</option>
+                </select>
+                <span className="hint">из числа треков</span>
+              </div>
+            </div>
+
+            <div className="field">
+              <label className="label" htmlFor="draft-artist">
+                Исполнитель
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="draft-artist"
+                  className="input"
+                  placeholder="Имя артиста"
+                  value={draft.artist}
+                  disabled={!!existing || locked}
+                  autoComplete="off"
+                  onChange={(e) => {
+                    updateDraft({ artist: e.target.value, artistUuid: undefined, artistName: undefined });
+                    setSuggestOpen(true);
+                  }}
+                  onFocus={() => setSuggestOpen(true)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.parentElement?.contains(e.relatedTarget as Node | null)) setSuggestOpen(false);
+                  }}
+                  onKeyDown={(e) => e.key === 'Escape' && setSuggestOpen(false)}
+                  aria-label="Исполнитель"
+                />
+                {canSuggest && (
+                  <div className="suggest">
+                    <div className="suggest-list">
+                      {suggest.isFetching && !suggest.data?.length && <div className="suggest-note">Поиск по каталогу…</div>}
+                      {suggest.data?.map((a) => (
+                        <button
+                          key={a.artist_uuid}
+                          type="button"
+                          className={`suggest-item${a.artist_uuid === draft.artistUuid ? ' selected' : ''}`}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => pickArtist(a)}
+                        >
+                          {a.artist_name}
+                          <span className="suggest-id">{shortId(a.artist_uuid)}</span>
+                        </button>
+                      ))}
+                      {suggest.data && !suggest.data.length && (
+                        <div className="suggest-note">Совпадений нет — «{draft.artist.trim()}» зальётся как новый артист.</div>
+                      )}
+                      {suggest.error && <div className="suggest-note c-err">Поиск не ответил: {errorLabel(suggest.error)}</div>}
                     </div>
-                  )}
-                </div>
-                {draft.artistUuid && draft.artistName && !existing && (
-                  <span className="hint artist-binding">
-                    Зальётся в карточку «{draft.artistName}» · <span className="mono">{shortId(draft.artistUuid)}</span>
                     <button
                       type="button"
-                      className="link-muted"
-                      title="Выбрать артиста заново"
-                      onClick={() => updateDraft({ artistUuid: undefined, artistName: undefined })}
+                      className="suggest-item suggest-create"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => setSuggestOpen(false)}
                     >
-                      сбросить ×
+                      + Создать нового: «{draft.artist.trim()}»
                     </button>
-                  </span>
+                  </div>
                 )}
               </div>
+              {draft.artistUuid && draft.artistName && !existing && (
+                <span className="hint artist-binding">
+                  Зальётся в карточку «{draft.artistName}» · <span className="mono">{shortId(draft.artistUuid)}</span>
+                  <button
+                    type="button"
+                    className="link-muted"
+                    title="Выбрать артиста заново"
+                    onClick={() => updateDraft({ artistUuid: undefined, artistName: undefined })}
+                  >
+                    сбросить ×
+                  </button>
+                </span>
+              )}
+            </div>
+
+            <div className="hint">
+              Названия, порядок и статусы публикации сохраняются в браузере: после перезагрузки черновик вернётся, файлы
+              попросит выбрать заново.
             </div>
             <div className="note">{typeNote}</div>
 
-            <button type="button" className="btn-wide" disabled={!ready || locked} onClick={addAll}>
-              {addAllLabel}
-            </button>
-
-            <div className="stack" style={{ borderTop: '1px solid var(--card-line)' }}>
+            <div className="stack" style={{ borderTop: '1px solid var(--card-line)', paddingTop: 14 }}>
+              <div className="section-head" style={{ alignItems: 'center', paddingBottom: 10 }}>
+                <div className="label">
+                  Треки
+                  {draft.tracks.length > 0 && (
+                    <span className="tag muted" style={{ marginLeft: 8 }}>
+                      {draft.tracks.length}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn sm"
+                  disabled={!ready || locked}
+                  onClick={addAll}
+                  title="Все разобранные файлы из очереди — в черновик, по номеру трека из тегов"
+                >
+                  {addAllLabel}
+                </button>
+              </div>
               {draft.tracks.map((t, i) => {
                 const label = phaseLabel(t);
                 const created = !!t.trackUuid;
@@ -642,7 +749,11 @@ export function Releases() {
                   </div>
                 );
               })}
-              {!draft.tracks.length && <div className="empty" style={{ padding: '18px 0' }}>Треков нет. Дождись разбора тегов и добавь их одной кнопкой.</div>}
+              {!draft.tracks.length && (
+                <div className="empty" style={{ padding: '18px 0' }}>
+                  Треков нет. Дождись разбора тегов и добавь их кнопкой сверху.
+                </div>
+              )}
             </div>
 
             <ErrorLine error={draft.error} />
@@ -656,8 +767,9 @@ export function Releases() {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ font: '400 11.5px/1.2 var(--mono)', color: 'var(--text-4)' }}>
+              <span style={{ font: '400 11.5px/1.5 var(--mono)', color: 'var(--text-4)' }}>
                 {draft.tracks.length} тр · {fmtDuration(totalMs)}
+                {probing > 0 ? ` · ${probing} обрабатывается` : ''}
                 {draft.albumUuid && ` · альбом ${shortId(draft.albumUuid)}`}
               </span>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -667,7 +779,7 @@ export function Releases() {
                   </button>
                 )}
                 <button type="button" className="btn-accent lg" disabled={!canPublish} onClick={publish}>
-                  {draft.publishing ? 'Публикация…' : resumable ? 'Продолжить' : existing ? 'Добавить' : 'Опубликовать'}
+                  {draft.publishing ? 'Публикация…' : resumable ? 'Продолжить' : existing ? 'Добавить' : 'Опубликовать релиз'}
                 </button>
               </div>
             </div>

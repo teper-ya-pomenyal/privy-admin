@@ -372,6 +372,11 @@ export function removeFromQueue(id: string) {
   set((s) => ({ ...s, queue: s.queue.filter((q) => q.id !== id) }));
 }
 
+/** Убрать из очереди всё разом: файлы остаются на диске, просто зона чистится. */
+export function clearQueue() {
+  set((s) => ({ ...s, queue: [] }));
+}
+
 // ---------- черновик ----------
 
 const byTrackOrder = (a: QueueItem, b: QueueItem) =>

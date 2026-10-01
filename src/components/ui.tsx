@@ -29,6 +29,15 @@ export const SunIcon = ({ size = 16 }: { size?: number }) => (
   />
 );
 export const MoonIcon = ({ size = 16 }: { size?: number }) => <Ico size={size} d={['M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z']} />;
+export const UploadIcon = ({ size = 16 }: { size?: number }) => (
+  <Ico size={size} d={['M12 15.4V5.2', 'm7.6 9 4.4-4.4L16.4 9', 'M5 15.6v2.6A1.8 1.8 0 0 0 6.8 20h10.4a1.8 1.8 0 0 0 1.8-1.8v-2.6']} />
+);
+export const TrashIcon = ({ size = 16 }: { size?: number }) => (
+  <Ico
+    size={size}
+    d={['M4.5 7h15', 'M9.5 7V5.6A1.6 1.6 0 0 1 11.1 4h1.8a1.6 1.6 0 0 1 1.6 1.6V7', 'M6.4 7l.8 12.2a1.6 1.6 0 0 0 1.6 1.5h6.4a1.6 1.6 0 0 0 1.6-1.5L17.6 7', 'M10 11v6', 'M14 11v6']}
+  />
+);
 
 export function ScreenHeader({ code, title, sub, aside }: { code: string; title: string; sub: ReactNode; aside?: ReactNode }) {
   return (
